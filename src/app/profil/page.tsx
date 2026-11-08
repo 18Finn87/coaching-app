@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Karte, Seitentitel } from "@/components/Bausteine";
+import { EinwilligungenVerwalten } from "@/components/EinwilligungenVerwalten";
 import { useKonto, useProfil } from "@/lib/konto";
 import { supabase } from "@/lib/supabase";
 
@@ -90,10 +91,19 @@ export default function ProfilSeite() {
         </button>
       </Karte>
 
-      <Karte titel="Datenschutz">
+      {profil.rolle === "athlet" ? (
+        <EinwilligungenVerwalten />
+      ) : (
+        <Karte titel="Datenschutz">
+          <p className="text-sm text-leise">
+            Die Einwilligungen deiner Athletinnen und Athleten siehst du unter „Athleten“.
+          </p>
+        </Karte>
+      )}
+
+      <Karte titel="Deine Daten">
         <p className="text-sm text-leise">
-          Einwilligungen ansehen und widerrufen, Daten herunterladen und Löschung beantragen – kommt in
-          Phase 2.
+          Daten herunterladen und Löschung beantragen – kommt in Schritt 2.5.
         </p>
       </Karte>
     </>

@@ -43,10 +43,11 @@ function Athleten() {
   const [betreuungen, setBetreuungen] = useState<Betreuung[] | null>(null);
   const [einladungen, setEinladungen] = useState<OffeneEinladung[]>([]);
   const [ladeFehler, setLadeFehler] = useState(false);
+  const [einwilligungen, setEinwilligungen] = useState<Record<string, Set<string>>>({});
 
   const laden = useCallback(async () => {
     const sb = supabase();
-    const [b, e] = await Promise.all([
+    const [b, e, w] = await Promise.all([
       sb
         .from("coach_athlet")
         .select("id, status, erfahrungsstufe, start_am, athlet:profile!athlet_id(id, anzeigename)")
@@ -56,12 +57,18 @@ function Athleten() {
         .select("id, email, name, gueltig_bis")
         .is("angenommen_am", null)
         .order("erstellt_am", { ascending: false }),
+      sb.from("einwilligungen").select("athlet_id, art").is("widerrufen_am", null),
     ]);
-    if (b.error || e.error) {
+    if (b.error || e.error || w.error) {
       setLadeFehler(true);
       return;
     }
     setLadeFehler(false);
+    const neu: Record<string, Set<string>> = {};
+    for (const x of w.data as { athlet_id: string; art: string }[]) {
+      (neu[x.athlet_id] ??= new Set()).add(x.art);
+    }
+    setEinwilligungen(neu);
     setBetreuungen(b.data as unknown as Betreuung[]);
     setEinladungen(e.data as OffeneEinladung[]);
   }, []);
@@ -98,6 +105,15 @@ function Athleten() {
                   <p className="text-sm text-leise">
                     {stufeText[b.erfahrungsstufe]} · seit {datum(b.start_am)}
                   </p>
+                  {b.athlet && b.status !== "eingeladen" && (
+                    <p className="text-xs text-leise">
+                      {einwilligungen[b.athlet.id]?.has("nutzung")
+                        ? einwilligungen[b.athlet.id]?.has("gesundheitsdaten")
+                          ? "Einwilligung: Nutzung ✓ · Gesundheitsdaten ✓"
+                          : "Einwilligung: Nutzung ✓ · Gesundheitsdaten –"
+                        : "Einwilligung zur Nutzung fehlt noch"}
+                    </p>
+                  )}
                 </div>
                 <span
                   className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${

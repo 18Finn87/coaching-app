@@ -1,8 +1,10 @@
 "use client";
 
+import { EinwilligungsAnbieter } from "@/lib/einwilligungen";
 import { KontoAnbieter, useKonto } from "@/lib/konto";
 import { supabase } from "@/lib/supabase";
 import { Anmeldung } from "./Anmeldung";
+import { Einwilligungspruefung } from "./Einwilligungsabfrage";
 import { Navigation } from "./Navigation";
 
 /**
@@ -63,7 +65,7 @@ function Inhalt({ children }: { children: React.ReactNode }) {
         </Einfach>
       );
     case "angemeldet":
-      return (
+      const rahmen = (
         <div className="flex min-h-dvh flex-col">
           <header className="sticky top-0 z-10 border-b border-rand bg-background/90 backdrop-blur">
             <div className="mx-auto flex h-14 w-full max-w-2xl items-center justify-between px-4">
@@ -79,6 +81,15 @@ function Inhalt({ children }: { children: React.ReactNode }) {
           </main>
           <Navigation rolle={zustand.profil.rolle} />
         </div>
+      );
+      return (
+        <EinwilligungsAnbieter>
+          {zustand.profil.rolle === "athlet" ? (
+            <Einwilligungspruefung>{rahmen}</Einwilligungspruefung>
+          ) : (
+            rahmen
+          )}
+        </EinwilligungsAnbieter>
       );
   }
 }
