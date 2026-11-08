@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* Farben der App an einer Stelle. Heller und dunkler Modus folgen der Handy-Einstellung. */
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --flaeche: #ffffff;
+  --rand: #e2e8f0;
+  --leise: #64748b;
+  --akzent: #2563eb;
+  --akzent-text: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b0f14;
+    --foreground: #e5e7eb;
+    --flaeche: #131a22;
+    --rand: #243040;
+    --leise: #94a3b8;
+    --akzent: #60a5fa;
+    --akzent-text: #0b0f14;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-flaeche: var(--flaeche);
+  --color-rand: var(--rand);
+  --color-leise: var(--leise);
+  --color-akzent: var(--akzent);
+  --color-akzent-text: var(--akzent-text);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
