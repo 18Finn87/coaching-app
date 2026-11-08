@@ -36,7 +36,13 @@ async function profilLaden(sitzung: Session): Promise<KontoZustand> {
     .maybeSingle();
   if (error) return { art: "fehler", sitzung };
   if (!data) return { art: "ohne_profil", sitzung };
-  return { art: "angemeldet", sitzung, profil: data as Profil };
+  const profil = data as Profil;
+  if (profil.rolle === "athlet") {
+    // Erste Anmeldung nach einer Einladung: Betreuung aktivieren.
+    // Bei späteren Anmeldungen passiert dabei nichts.
+    await supabase().rpc("einladung_annehmen");
+  }
+  return { art: "angemeldet", sitzung, profil };
 }
 
 export function KontoAnbieter({ children }: { children: React.ReactNode }) {
