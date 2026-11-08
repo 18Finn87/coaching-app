@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
     const admin = createClient(url, schluessel("SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SECRET_KEYS"), {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const { error: einladeFehler } = await admin.auth.admin.inviteUserByEmail(email, {
+    const { data: eingeladen, error: einladeFehler } = await admin.auth.admin.inviteUserByEmail(email, {
       redirectTo: APP_ADRESSE,
     });
     if (einladeFehler) {
@@ -109,6 +109,16 @@ Deno.serve(async (req) => {
       }
       console.error("Einladung fehlgeschlagen:", einladeFehler.code, text);
       return antwort(req, 502, { fehler: "versand_fehlgeschlagen" });
+    }
+
+    // Konto gleich als bestätigt markieren. Sonst verweigert Supabase später den
+    // Anmeldecode, weil die öffentliche Registrierung ausgeschaltet ist. Dass die
+    // Adresse der Person gehört, beweist sie bei der Anmeldung mit dem Code aus der Mail.
+    if (eingeladen?.user) {
+      const { error: bestaetigFehler } = await admin.auth.admin.updateUserById(eingeladen.user.id, {
+        email_confirm: true,
+      });
+      if (bestaetigFehler) console.error("Bestätigen fehlgeschlagen:", bestaetigFehler.message);
     }
 
     return antwort(req, 200, { ok: true });
