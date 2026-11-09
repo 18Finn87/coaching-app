@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { Karte, NurFuer, Seitentitel } from "@/components/Bausteine";
 import { AnamneseAnsicht } from "@/components/AnamneseAnsicht";
 import { EinheitenListe } from "@/components/EinheitenListe";
+import { Fortschritt } from "@/components/Fortschritt";
+import { useProfil } from "@/lib/konto";
 import { stammdatenLaden, type Stammdaten } from "@/lib/stammdaten";
 import { supabase } from "@/lib/supabase";
 import { ausstattungText, datum, statusText, stufeText, tagText, zielText } from "@/lib/texte";
@@ -138,9 +140,29 @@ function Inhalt() {
             <EinheitenListe athletId={b.athlet_id} grenze={10} />
           </Karte>
 
+          <FortschrittAufklappbar athletId={b.athlet_id} />
+
           <AnamneseAnsicht athletId={b.athlet_id} einwilligung={hatGesundheit} />
         </>
       )}
+    </>
+  );
+}
+
+function FortschrittAufklappbar({ athletId }: { athletId: string }) {
+  const profil = useProfil();
+  const [offen, setOffen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        aria-expanded={offen}
+        onClick={() => setOffen(!offen)}
+        className="h-12 rounded-xl border border-rand bg-flaeche px-4 text-left font-semibold"
+      >
+        {offen ? "▾" : "▸"} Fortschritt und Maximaltests
+      </button>
+      {offen && <Fortschritt athletId={athletId} ichId={profil.id} />}
     </>
   );
 }

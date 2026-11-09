@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { Karte, Seitentitel } from "@/components/Bausteine";
 import { DatenVerwalten } from "@/components/DatenVerwalten";
+import { FormelEinstellung } from "@/components/FormelEinstellung";
 import { EinwilligungenVerwalten } from "@/components/EinwilligungenVerwalten";
 import { MeineBetreuung } from "@/components/MeineBetreuung";
 import { StammdatenFormular } from "@/components/StammdatenFormular";
@@ -110,11 +111,14 @@ export default function ProfilSeite() {
       {profil.rolle === "athlet" ? (
         <EinwilligungenVerwalten />
       ) : (
-        <Karte titel="Datenschutz">
-          <p className="text-sm text-leise">
-            Die Einwilligungen deiner Athletinnen und Athleten siehst du unter „Athleten“.
-          </p>
-        </Karte>
+        <>
+          <FormelEinstellung coachId={profil.id} />
+          <Karte titel="Datenschutz">
+            <p className="text-sm text-leise">
+              Die Einwilligungen deiner Athletinnen und Athleten siehst du unter „Athleten“.
+            </p>
+          </Karte>
+        </>
       )}
 
       {profil.rolle === "athlet" && <DatenVerwalten />}

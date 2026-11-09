@@ -9,6 +9,7 @@
   --leise: #64748b;
   --akzent: #2563eb;
   --akzent-text: #ffffff;
+  --diagramm: #2563eb;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,6 +21,7 @@
     --leise: #94a3b8;
     --akzent: #60a5fa;
     --akzent-text: #0b0f14;
+    --diagramm: #4a8ff7;
   }
 }
 
@@ -31,6 +33,7 @@
   --color-leise: var(--leise);
   --color-akzent: var(--akzent);
   --color-akzent-text: var(--akzent-text);
+  --color-diagramm: var(--diagramm);
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
 }
 
