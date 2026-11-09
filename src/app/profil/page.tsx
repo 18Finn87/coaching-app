@@ -8,6 +8,8 @@ import { FormelEinstellung } from "@/components/FormelEinstellung";
 import { EinwilligungenVerwalten } from "@/components/EinwilligungenVerwalten";
 import { MeineBetreuung } from "@/components/MeineBetreuung";
 import { RegelEinstellung } from "@/components/RegelEinstellung";
+import { KontoWechsel } from "@/components/KontoWechsel";
+import { abmelden } from "@/lib/kontowechsel";
 import { StammdatenFormular } from "@/components/StammdatenFormular";
 import { useKonto, useProfil } from "@/lib/konto";
 import { supabase } from "@/lib/supabase";
@@ -102,12 +104,14 @@ export default function ProfilSeite() {
         </dl>
         <button
           type="button"
-          onClick={() => supabase().auth.signOut()}
+          onClick={() => abmelden(profil.id)}
           className="mt-4 h-11 rounded-xl border border-rand px-4 font-medium"
         >
           Abmelden
         </button>
       </Karte>
+
+      <KontoWechsel profil={profil} />
 
       {profil.rolle === "athlet" ? (
         <EinwilligungenVerwalten />

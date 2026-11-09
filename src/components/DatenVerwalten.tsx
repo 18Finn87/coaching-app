@@ -5,6 +5,7 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 import { Karte } from "./Bausteine";
 import { anamneseListe, beschwerdenListe, gesundheitProtokoll } from "@/lib/anamnese";
 import { useKonto } from "@/lib/konto";
+import { vergessen } from "@/lib/kontowechsel";
 import { supabase } from "@/lib/supabase";
 
 /** Athletin / Athlet: alle eigenen Daten herunterladen oder das Konto löschen. */
@@ -111,7 +112,8 @@ export function DatenVerwalten() {
       });
       return;
     }
-    // Konto ist weg – lokal abmelden
+    // Konto ist weg – lokal abmelden und auf dem Gerät vergessen
+    vergessen(id);
     await supabase().auth.signOut({ scope: "local" });
   }
 

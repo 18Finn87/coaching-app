@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabase";
 import { Anmeldung } from "./Anmeldung";
 import { Einwilligungspruefung } from "./Einwilligungsabfrage";
 import { Glocke } from "./Glocke";
+import { GemerkteKontenListe } from "./KontoWechsel";
+import { gemerkteKonten } from "@/lib/kontowechsel";
 import { Navigation } from "./Navigation";
 import { TrainingSync } from "./TrainingSync";
 
@@ -42,6 +44,12 @@ function Inhalt({ children }: { children: React.ReactNode }) {
     case "abgemeldet":
       return (
         <Einfach titel="Coaching App" untertitel="Private App für Krafttraining und Coaching.">
+          {gemerkteKonten().length > 0 && (
+            <section className="rounded-2xl border border-rand bg-flaeche p-4">
+              <h2 className="mb-3 text-lg font-semibold">Gemerkte Konten</h2>
+              <GemerkteKontenListe aktuell={null} />
+            </section>
+          )}
           <section className="rounded-2xl border border-rand bg-flaeche p-4">
             <h2 className="mb-3 text-lg font-semibold">Anmelden</h2>
             <Anmeldung />
