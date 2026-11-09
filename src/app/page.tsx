@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Karte, Seitentitel } from "@/components/Bausteine";
+import { MeinPlan } from "@/components/MeinPlan";
 import { useEinwilligungen } from "@/lib/einwilligungen";
 import { useProfil } from "@/lib/konto";
 
@@ -12,6 +13,9 @@ const schritte = [
   { nr: "2.3", text: "Stammdaten und Erfahrungsstufe", fertig: true },
   { nr: "2.4", text: "Anamnese im geschützten Gesundheitsbereich", fertig: true },
   { nr: "2.5", text: "Daten herunterladen und Konto löschen", fertig: true },
+  { nr: "3.1", text: "Übungsbibliothek", fertig: true },
+  { nr: "3.2–3.4", text: "Plan-Editor mit Versionen und Vergleich", fertig: true },
+  { nr: "3.5", text: "Athleten sehen ihren Plan", fertig: true },
 ];
 
 export default function Startseite() {
@@ -52,14 +56,14 @@ export default function Startseite() {
 
 function Heute() {
   const { aktiv } = useEinwilligungen();
+  const profil = useProfil();
   return (
     <>
       <Seitentitel titel="Heute" />
+      <MeinPlan athletId={profil.id} />
       <Karte>
         <p className="text-sm font-medium text-akzent">Kommt in Phase 4</p>
-        <p className="mt-1 text-leise">
-          Hier siehst du deine nächste Trainingseinheit und startest das Training.
-        </p>
+        <p className="mt-1 text-leise">Training starten und Sätze eintragen.</p>
       </Karte>
       <Karte titel="Bevor es losgeht">
         <ul className="flex flex-col gap-3">
