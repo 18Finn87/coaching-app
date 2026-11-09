@@ -61,11 +61,7 @@ function Heute() {
     <>
       <Seitentitel titel="Heute" />
       <MeinPlan athletId={profil.id} />
-      <Karte>
-        <p className="text-sm font-medium text-akzent">Kommt in Phase 4</p>
-        <p className="mt-1 text-leise">Training starten und Sätze eintragen.</p>
-      </Karte>
-      <Karte titel="Bevor es losgeht">
+      <Karte titel="Deine Angaben">
         <ul className="flex flex-col gap-3">
           <li>
             <Link href="/profil/" className="font-medium text-akzent underline underline-offset-4">

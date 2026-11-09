@@ -151,7 +151,21 @@ export function EinwilligungsAnbieter({ children }: { children: React.ReactNode 
         .neq("status", "beendet")
         .limit(1),
     ]);
+    const cacheSchluessel = "coaching.einwilligungen." + nutzerId;
     if (e.error) {
+      // Ohne Internet: zuletzt bekannten Stand verwenden
+      try {
+        const roh = localStorage.getItem(cacheSchluessel);
+        if (roh) {
+          const gespeichert = JSON.parse(roh) as { liste: Einwilligung[]; coach: string };
+          setListe(gespeichert.liste);
+          setCoachName(gespeichert.coach);
+          setFehler(false);
+          return;
+        }
+      } catch {
+        // kein Speicher
+      }
       setFehler(true);
       return;
     }
@@ -159,6 +173,11 @@ export function EinwilligungsAnbieter({ children }: { children: React.ReactNode 
     setListe(e.data as Einwilligung[]);
     const coach = (c.data?.[0] as unknown as { coach: { anzeigename: string } | null } | undefined)?.coach;
     setCoachName(coach?.anzeigename ?? "");
+    try {
+      localStorage.setItem(cacheSchluessel, JSON.stringify({ liste: e.data, coach: coach?.anzeigename ?? "" }));
+    } catch {
+      // egal
+    }
   }, [nutzerId]);
 
   useEffect(() => {

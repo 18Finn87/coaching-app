@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { Anmeldung } from "./Anmeldung";
 import { Einwilligungspruefung } from "./Einwilligungsabfrage";
 import { Navigation } from "./Navigation";
+import { TrainingSync } from "./TrainingSync";
 
 /**
  * Umschließt jede Seite: Ohne Anmeldung erscheint nur die Anmeldung,
@@ -85,7 +86,10 @@ function Inhalt({ children }: { children: React.ReactNode }) {
       return (
         <EinwilligungsAnbieter>
           {zustand.profil.rolle === "athlet" ? (
-            <Einwilligungspruefung>{rahmen}</Einwilligungspruefung>
+            <Einwilligungspruefung>
+              <TrainingSync athletId={zustand.profil.id} />
+              {rahmen}
+            </Einwilligungspruefung>
           ) : (
             rahmen
           )}

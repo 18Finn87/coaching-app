@@ -28,15 +28,31 @@ type KontoKontext = {
 
 const Kontext = createContext<KontoKontext | null>(null);
 
+const PROFIL_CACHE = "coaching.profil.";
+
 async function profilLaden(sitzung: Session): Promise<KontoZustand> {
   const { data, error } = await supabase()
     .from("profile")
     .select("id, rolle, anzeigename")
     .eq("id", sitzung.user.id)
     .maybeSingle();
-  if (error) return { art: "fehler", sitzung };
+  if (error) {
+    // Ohne Internet: zuletzt bekanntes Profil verwenden, damit Training weitergeht
+    try {
+      const roh = localStorage.getItem(PROFIL_CACHE + sitzung.user.id);
+      if (roh) return { art: "angemeldet", sitzung, profil: JSON.parse(roh) as Profil };
+    } catch {
+      // kein Speicher
+    }
+    return { art: "fehler", sitzung };
+  }
   if (!data) return { art: "ohne_profil", sitzung };
   const profil = data as Profil;
+  try {
+    localStorage.setItem(PROFIL_CACHE + profil.id, JSON.stringify(profil));
+  } catch {
+    // egal
+  }
   if (profil.rolle === "athlet") {
     // Erste Anmeldung nach einer Einladung: Betreuung aktivieren.
     // Bei späteren Anmeldungen passiert dabei nichts.

@@ -4,18 +4,30 @@ import { useEffect, useState } from "react";
 import { satzText, satztypText, versionInhaltLaden, type Einheit } from "@/lib/plaene";
 
 /** Zeigt eine Planversion zum Lesen (Coach und Athlet). */
-export function PlanAnsicht({ versionId }: { versionId: string }) {
-  const [einheiten, setEinheiten] = useState<Einheit[] | null>(null);
+export function PlanAnsicht({
+  versionId,
+  vorgeladen,
+  aktion,
+}: {
+  versionId: string;
+  /** Bereits geladener Inhalt (z. B. aus dem Speicher auf dem Handy) */
+  vorgeladen?: Einheit[];
+  /** Zusätzlicher Knopf pro Trainingstag, z. B. „Training starten“ */
+  aktion?: (e: Einheit) => React.ReactNode;
+}) {
+  const [geladen, setGeladen] = useState<Einheit[] | null>(null);
   const [fehler, setFehler] = useState(false);
 
   useEffect(() => {
+    if (vorgeladen) return;
     versionInhaltLaden(versionId).then(({ daten, fehler }) => {
       setFehler(fehler);
-      setEinheiten(daten);
+      setGeladen(daten);
     });
-  }, [versionId]);
+  }, [versionId, vorgeladen]);
 
-  if (fehler) return <p role="alert">Der Plan konnte nicht geladen werden.</p>;
+  const einheiten = vorgeladen ?? geladen;
+  if (fehler && !vorgeladen) return <p role="alert">Der Plan konnte nicht geladen werden.</p>;
   if (einheiten === null) return <p className="text-leise">Lädt …</p>;
   if (einheiten.length === 0) return <p className="text-leise">Dieser Plan ist leer.</p>;
 
@@ -47,6 +59,7 @@ export function PlanAnsicht({ versionId }: { versionId: string }) {
               </li>
             ))}
           </ol>
+          {aktion && <div className="mt-3">{aktion(e)}</div>}
         </section>
       ))}
     </div>

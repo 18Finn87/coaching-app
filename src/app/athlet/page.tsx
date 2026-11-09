@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Karte, NurFuer, Seitentitel } from "@/components/Bausteine";
 import { AnamneseAnsicht } from "@/components/AnamneseAnsicht";
+import { EinheitenListe } from "@/components/EinheitenListe";
 import { stammdatenLaden, type Stammdaten } from "@/lib/stammdaten";
 import { supabase } from "@/lib/supabase";
 import { ausstattungText, datum, statusText, stufeText, tagText, zielText } from "@/lib/texte";
@@ -131,6 +132,10 @@ function Inhalt() {
                 <dd>{datum(stamm.aktualisiert_am)}</dd>
               </dl>
             )}
+          </Karte>
+
+          <Karte titel="Letzte Einheiten">
+            <EinheitenListe athletId={b.athlet_id} grenze={10} />
           </Karte>
 
           <AnamneseAnsicht athletId={b.athlet_id} einwilligung={hatGesundheit} />

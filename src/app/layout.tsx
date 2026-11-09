@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { AppRahmen } from "@/components/AppRahmen";
+import { OfflineVorbereitung } from "@/components/OfflineVorbereitung";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="de" className={`${geistSans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
+        <OfflineVorbereitung />
         <AppRahmen>{children}</AppRahmen>
       </body>
     </html>
