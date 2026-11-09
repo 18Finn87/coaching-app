@@ -5,6 +5,8 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Karte, NurFuer, Seitentitel } from "@/components/Bausteine";
 import { AnamneseAnsicht } from "@/components/AnamneseAnsicht";
+import { CheckinsFuerCoach, EvaluationenFuerCoach } from "@/components/CoachingKarten";
+import type { Stufe } from "@/lib/evaluation";
 import { EinheitenListe } from "@/components/EinheitenListe";
 import { Fortschritt } from "@/components/Fortschritt";
 import { useProfil } from "@/lib/konto";
@@ -135,6 +137,10 @@ function Inhalt() {
               </dl>
             )}
           </Karte>
+
+          <EvaluationenFuerCoach athletId={b.athlet_id} stufe={b.erfahrungsstufe as Stufe} />
+
+          <CheckinsFuerCoach athletId={b.athlet_id} />
 
           <Karte titel="Letzte Einheiten">
             <EinheitenListe athletId={b.athlet_id} grenze={10} />

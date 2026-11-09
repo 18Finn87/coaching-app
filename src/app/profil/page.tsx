@@ -7,6 +7,7 @@ import { DatenVerwalten } from "@/components/DatenVerwalten";
 import { FormelEinstellung } from "@/components/FormelEinstellung";
 import { EinwilligungenVerwalten } from "@/components/EinwilligungenVerwalten";
 import { MeineBetreuung } from "@/components/MeineBetreuung";
+import { RegelEinstellung } from "@/components/RegelEinstellung";
 import { StammdatenFormular } from "@/components/StammdatenFormular";
 import { useKonto, useProfil } from "@/lib/konto";
 import { supabase } from "@/lib/supabase";
@@ -113,6 +114,7 @@ export default function ProfilSeite() {
       ) : (
         <>
           <FormelEinstellung coachId={profil.id} />
+          <RegelEinstellung />
           <Karte titel="Datenschutz">
             <p className="text-sm text-leise">
               Die Einwilligungen deiner Athletinnen und Athleten siehst du unter „Athleten“.

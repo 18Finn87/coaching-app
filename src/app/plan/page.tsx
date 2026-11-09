@@ -22,7 +22,9 @@ export default function PlanSeite() {
 }
 
 function Inhalt() {
-  const id = useSearchParams().get("id") ?? "";
+  const parameter = useSearchParams();
+  const id = parameter.get("id") ?? "";
+  const nachEvaluation = parameter.get("nach_evaluation") === "1";
   const router = useRouter();
   const [plan, setPlan] = useState<Plan | null | undefined>(undefined);
   const [person, setPerson] = useState("");
@@ -151,6 +153,12 @@ function Inhalt() {
       </Link>
       <Seitentitel titel={plan.titel} text={`für ${person || "–"}${plan.status === "archiviert" ? " · archiviert" : ""}`} />
       {plan.ziel && <p className="-mt-2 whitespace-pre-wrap text-sm text-leise">{plan.ziel}</p>}
+      {nachEvaluation && (
+        <p role="status" className="rounded-xl border border-akzent bg-akzent/10 p-3 text-sm">
+          Evaluation abgeschlossen: „Plan anpassen“. Am Plan wurde nichts verändert. Wenn du etwas ändern willst, lege
+          unten eine neue Version an und veröffentliche sie.
+        </p>
+      )}
 
       <Karte titel="Versionen">
         <div className="flex flex-wrap gap-2">

@@ -5,6 +5,7 @@ import { KontoAnbieter, useKonto } from "@/lib/konto";
 import { supabase } from "@/lib/supabase";
 import { Anmeldung } from "./Anmeldung";
 import { Einwilligungspruefung } from "./Einwilligungsabfrage";
+import { Glocke } from "./Glocke";
 import { Navigation } from "./Navigation";
 import { TrainingSync } from "./TrainingSync";
 
@@ -71,9 +72,12 @@ function Inhalt({ children }: { children: React.ReactNode }) {
           <header className="sticky top-0 z-10 border-b border-rand bg-background/90 backdrop-blur">
             <div className="mx-auto flex h-14 w-full max-w-2xl items-center justify-between px-4">
               <span className="font-semibold">Coaching App</span>
-              <span className="truncate pl-4 text-sm text-leise">
-                {zustand.profil.anzeigename || zustand.sitzung.user.email}
-                {zustand.profil.rolle === "coach" ? " · Coach" : ""}
+              <span className="flex min-w-0 items-center gap-1">
+                <span className="truncate pl-4 text-sm text-leise">
+                  {zustand.profil.anzeigename || zustand.sitzung.user.email}
+                  {zustand.profil.rolle === "coach" ? " · Coach" : ""}
+                </span>
+                <Glocke />
               </span>
             </div>
           </header>

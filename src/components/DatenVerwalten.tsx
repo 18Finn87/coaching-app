@@ -23,7 +23,7 @@ export function DatenVerwalten() {
     setLaeuft(true);
     setMeldung(null);
     const sb = supabase();
-    const [profil, betreuung, stamm, einw, anamnese, beschwerden, protokoll] = await Promise.all([
+    const [profil, betreuung, stamm, einw, anamnese, beschwerden, protokoll, checkins, cGesundheit, trainings, maxtests, hinweise] = await Promise.all([
       sb.from("profile").select("rolle, anzeigename, erstellt_am").eq("id", id).maybeSingle(),
       sb
         .from("coach_athlet")
@@ -34,10 +34,23 @@ export function DatenVerwalten() {
       anamneseListe(id),
       beschwerdenListe(id),
       gesundheitProtokoll(id),
+      sb.from("checkins").select("*").eq("athlet_id", id).order("woche"),
+      sb.rpc("checkin_gesundheit_liste", { p_athlet: id }),
+      sb
+        .from("trainingseinheiten")
+        .select("*, ausgefuehrte_uebungen (*, ausgefuehrte_saetze (*))")
+        .eq("athlet_id", id)
+        .order("gestartet_am"),
+      sb.from("maxtests").select("*").eq("athlet_id", id).order("datum"),
+      sb.from("benachrichtigungen").select("art, text_kurz, erstellt_am, gelesen_am").order("erstellt_am"),
     ]);
     setLaeuft(false);
 
-    const fehler = [profil, betreuung, stamm, einw].some((x) => x.error) || anamnese.fehler || beschwerden.fehler || protokoll.fehler;
+    const fehler =
+      [profil, betreuung, stamm, einw, checkins, cGesundheit, trainings, maxtests, hinweise].some((x) => x.error) ||
+      anamnese.fehler ||
+      beschwerden.fehler ||
+      protokoll.fehler;
     if (fehler) {
       setMeldung({ ok: false, text: "Nicht alle Daten konnten geladen werden. Bitte versuche es erneut." });
       return;
@@ -51,9 +64,14 @@ export function DatenVerwalten() {
       betreuung: betreuung.data,
       angaben_zum_training: stamm.data,
       einwilligungen: einw.data,
+      trainings: trainings.data,
+      maximaltests: maxtests.data,
+      checkins: checkins.data,
+      hinweise: hinweise.data,
       gesundheit: {
         anamnese: anamnese.daten,
         beschwerden: beschwerden.daten,
+        checkins_gesundheitsteil: cGesundheit.data,
         aenderungsprotokoll: protokoll.daten,
       },
     };
