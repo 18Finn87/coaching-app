@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { Karte, Seitentitel } from "@/components/Bausteine";
+import { DatenVerwalten } from "@/components/DatenVerwalten";
 import { EinwilligungenVerwalten } from "@/components/EinwilligungenVerwalten";
 import { MeineBetreuung } from "@/components/MeineBetreuung";
 import { StammdatenFormular } from "@/components/StammdatenFormular";
@@ -116,11 +117,7 @@ export default function ProfilSeite() {
         </Karte>
       )}
 
-      <Karte titel="Deine Daten">
-        <p className="text-sm text-leise">
-          Daten herunterladen und Löschung beantragen – kommt in Schritt 2.5.
-        </p>
-      </Karte>
+      {profil.rolle === "athlet" && <DatenVerwalten />}
     </>
   );
 }
