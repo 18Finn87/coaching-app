@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { Karte, NurFuer, Seitentitel } from "@/components/Bausteine";
@@ -8,6 +9,7 @@ import { datum, statusText, stufeText } from "@/lib/texte";
 
 type Betreuung = {
   id: string;
+  athlet_id: string;
   status: string;
   erfahrungsstufe: string;
   start_am: string;
@@ -50,7 +52,7 @@ function Athleten() {
     const [b, e, w] = await Promise.all([
       sb
         .from("coach_athlet")
-        .select("id, status, erfahrungsstufe, start_am, athlet:profile!athlet_id(id, anzeigename)")
+        .select("id, athlet_id, status, erfahrungsstufe, start_am, athlet:profile!athlet_id(id, anzeigename)")
         .order("start_am", { ascending: false }),
       sb
         .from("einladungen")
@@ -99,7 +101,11 @@ function Athleten() {
         {betreuungen && betreuungen.length > 0 && (
           <ul className="flex flex-col divide-y divide-rand">
             {betreuungen.map((b) => (
-              <li key={b.id} className="flex items-center justify-between gap-3 py-3">
+              <li key={b.id}>
+               <Link
+                href={`/athlet/?id=${b.athlet_id}`}
+                className="flex items-center justify-between gap-3 py-3"
+               >
                 <div className="min-w-0">
                   <p className="truncate font-medium">{b.athlet?.anzeigename || "Ohne Namen"}</p>
                   <p className="text-sm text-leise">
@@ -124,6 +130,7 @@ function Athleten() {
                 >
                   {statusText[b.status]}
                 </span>
+               </Link>
               </li>
             ))}
           </ul>

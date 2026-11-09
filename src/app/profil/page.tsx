@@ -1,8 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { Karte, Seitentitel } from "@/components/Bausteine";
 import { EinwilligungenVerwalten } from "@/components/EinwilligungenVerwalten";
+import { MeineBetreuung } from "@/components/MeineBetreuung";
+import { StammdatenFormular } from "@/components/StammdatenFormular";
 import { useKonto, useProfil } from "@/lib/konto";
 import { supabase } from "@/lib/supabase";
 
@@ -74,6 +77,18 @@ export default function ProfilSeite() {
           )}
         </form>
       </Karte>
+
+      {profil.rolle === "athlet" && (
+        <>
+          <MeineBetreuung athletId={profil.id} />
+          <StammdatenFormular athletId={profil.id} />
+          <Karte titel="Gesundheit">
+            <Link href="/anamnese/" className="font-medium text-akzent underline underline-offset-4">
+              Anamnese und Beschwerden öffnen
+            </Link>
+          </Karte>
+        </>
+      )}
 
       <Karte titel="Zugang">
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
