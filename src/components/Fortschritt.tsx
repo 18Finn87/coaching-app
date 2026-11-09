@@ -28,7 +28,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
       sb
         .from("trainingseinheiten")
         .select(
-          "id, gestartet_am, ausgefuehrte_uebungen (uebung_id, uebung_name, ausgefuehrte_saetze (satztyp, erledigt, wdh, last_kg, vorgabe))",
+          "id, gestartet_am, ausgefuehrte_uebungen (uebung_id, uebung_name, messart, ausgefuehrte_saetze (satztyp, erledigt, wdh, last_kg, dauer_sek, distanz_m, vorgabe))",
         )
         .eq("athlet_id", athletId)
         .eq("status", "abgeschlossen")
@@ -46,7 +46,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
       setFehler(true);
       return;
     }
-    type Roh = { id: string; gestartet_am: string; ausgefuehrte_uebungen: { uebung_id: string; uebung_name: string; ausgefuehrte_saetze: AEinheit["uebungen"][0]["saetze"] }[] };
+    type Roh = { id: string; gestartet_am: string; ausgefuehrte_uebungen: { uebung_id: string; uebung_name: string; messart: string; ausgefuehrte_saetze: AEinheit["uebungen"][0]["saetze"] }[] };
     setEinheiten(
       ((e.data as unknown as Roh[]) ?? []).map((x) => ({
         id: x.id,
@@ -54,6 +54,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
         uebungen: x.ausgefuehrte_uebungen.map((au) => ({
           uebung_id: au.uebung_id,
           uebung_name: au.uebung_name,
+          messart: au.messart,
           saetze: au.ausgefuehrte_saetze,
         })),
       })),
@@ -91,6 +92,11 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
   const p = gewaehlt.punkte;
   const testsHier = tests.filter((t) => t.uebung_id === gewaehlt.uebungId);
   const letzter = p[p.length - 1];
+  const ma = gewaehlt.messart;
+  const mitZeit = ma === "zeit" || ma === "zeit_last";
+  const mitStrecke = ma === "distanz" || ma === "distanz_last";
+  const nurWdh = ma === "wdh";
+  const mitKg = ma === "wdh_last";
 
   return (
     <div className="flex flex-col gap-4">
@@ -153,6 +159,61 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
         </Karte>
       )}
 
+      {mitZeit && p.some((x) => x.bestZeit != null) && (
+        <Karte>
+          <Liniendiagramm
+            titel="Längste Zeit"
+            einheit="s"
+            hinweis="Längster abgehakter Arbeitssatz pro Training (bei getrennten Seiten die bessere Seite)."
+            punkte={p.filter((x) => x.bestZeit != null).map((x) => ({ datum: x.datum, wert: x.bestZeit! }))}
+          />
+        </Karte>
+      )}
+
+      {mitZeit && p.some((x) => x.summeZeit > 0) && (
+        <Karte>
+          <Liniendiagramm
+            titel="Gesamtzeit"
+            einheit="s"
+            hinweis="Summe der Zeit aller abgehakten Arbeitssätze."
+            punkte={p.filter((x) => x.summeZeit > 0).map((x) => ({ datum: x.datum, wert: x.summeZeit }))}
+          />
+        </Karte>
+      )}
+
+      {mitStrecke && p.some((x) => x.bestStrecke != null) && (
+        <Karte>
+          <Liniendiagramm
+            titel="Längste Strecke"
+            einheit="m"
+            hinweis="Längster abgehakter Arbeitssatz pro Training."
+            punkte={p.filter((x) => x.bestStrecke != null).map((x) => ({ datum: x.datum, wert: x.bestStrecke! }))}
+          />
+        </Karte>
+      )}
+
+      {mitStrecke && p.some((x) => x.summeStrecke > 0) && (
+        <Karte>
+          <Liniendiagramm
+            titel="Gesamtstrecke"
+            einheit="m"
+            hinweis="Summe der Strecke aller abgehakten Arbeitssätze."
+            punkte={p.filter((x) => x.summeStrecke > 0).map((x) => ({ datum: x.datum, wert: x.summeStrecke }))}
+          />
+        </Karte>
+      )}
+
+      {nurWdh && p.some((x) => x.meisteWdh != null) && (
+        <Karte>
+          <Liniendiagramm
+            titel="Meiste Wiederholungen"
+            einheit="Wdh."
+            hinweis="Bester abgehakter Arbeitssatz pro Training."
+            punkte={p.filter((x) => x.meisteWdh != null).map((x) => ({ datum: x.datum, wert: x.meisteWdh! }))}
+          />
+        </Karte>
+      )}
+
       {p.some((x) => x.vorgabeGesamt > 0) && (
         <Karte titel="Vorgabe und Leistung">
           <ul className="flex flex-col gap-2">
@@ -178,11 +239,12 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
               ))}
           </ul>
           <p className="mt-2 text-xs text-leise">
-            „Erreicht“ heißt: mindestens die vorgegebenen Wiederholungen mit mindestens dem vorgegebenen Gewicht.
+            „Erreicht“ heißt: mindestens die vorgegebenen Wiederholungen, die vorgegebene Zeit oder Strecke und mindestens das vorgegebene Gewicht.
           </p>
         </Karte>
       )}
 
+      {mitKg && (
       <Maxtests
         athletId={athletId}
         ichId={ichId}
@@ -192,6 +254,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
         geschaetzt={letzter.e1rm}
         beiAenderung={laden}
       />
+      )}
     </div>
   );
 }

@@ -3,7 +3,10 @@
 import { useState, type FormEvent } from "react";
 import {
   geraetText,
+  messartJeModul,
   messartText,
+  modulText,
+  musterJeModul,
   muskelText,
   musterText,
   uebungArchivieren,
@@ -23,11 +26,13 @@ export function UebungFormular({
   fertig: (geaendert: boolean) => void;
 }) {
   const [name, setName] = useState(vorlage?.name ?? "");
+  const [modul, setModul] = useState(vorlage?.modul ?? "kraft");
   const [muster, setMuster] = useState(vorlage?.bewegungsmuster ?? "sonstiges");
   const [muskeln, setMuskeln] = useState<string[]>(vorlage?.muskelgruppen ?? []);
   const [geraete, setGeraete] = useState<string[]>(vorlage?.ausstattung ?? []);
   const [messart, setMessart] = useState(vorlage?.messart ?? "wdh_last");
   const [einseitig, setEinseitig] = useState(vorlage?.einseitig ?? false);
+  const [seitenGetrennt, setSeitenGetrennt] = useState(vorlage?.seiten_getrennt ?? false);
   const [e1rm, setE1rm] = useState(vorlage?.e1rm_geeignet ?? false);
   const [beschreibung, setBeschreibung] = useState(vorlage?.beschreibung ?? "");
   const [video, setVideo] = useState(vorlage?.video_link ?? "");
@@ -53,13 +58,14 @@ export function UebungFormular({
     setFehler("");
     const meldung = await uebungSpeichern(vorlage?.id ?? null, {
       name: n,
-      modul: vorlage?.modul ?? "kraft",
+      modul,
       bewegungsmuster: muster,
       muskelgruppen: muskeln,
       ausstattung: geraete,
       einseitig,
+      seiten_getrennt: einseitig && seitenGetrennt,
       messart,
-      e1rm_geeignet: e1rm,
+      e1rm_geeignet: modul === "kraft" && e1rm,
       beschreibung: beschreibung.trim(),
       video_link: v || null,
     });
@@ -92,17 +98,43 @@ export function UebungFormular({
         <input id="u-name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} className={feld} />
       </div>
 
+      <div className="flex flex-col gap-1">
+        <label htmlFor="u-modul" className="text-sm font-medium">
+          Bereich
+        </label>
+        <select
+          id="u-modul"
+          value={modul}
+          onChange={(e) => {
+            const neu = e.target.value;
+            setModul(neu);
+            if (!musterJeModul[neu]?.includes(muster)) setMuster("sonstiges");
+            // Bei neuen Übungen eine passende Messart vorschlagen
+            if (!vorlage) setMessart(messartJeModul[neu] ?? "wdh_last");
+          }}
+          className={feld}
+        >
+          {Object.entries(modulText).map(([w, t]) => (
+            <option key={w} value={w}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1">
           <label htmlFor="u-muster" className="text-sm font-medium">
             Bewegungsmuster
           </label>
           <select id="u-muster" value={muster} onChange={(e) => setMuster(e.target.value)} className={feld}>
-            {Object.entries(musterText).map(([w, t]) => (
-              <option key={w} value={w}>
-                {t}
-              </option>
-            ))}
+            {Object.entries(musterText)
+              .filter(([w]) => w === muster || (musterJeModul[modul] ?? []).includes(w))
+              .map(([w, t]) => (
+                <option key={w} value={w}>
+                  {t}
+                </option>
+              ))}
           </select>
         </div>
         <div className="flex flex-col gap-1">
@@ -127,6 +159,21 @@ export function UebungFormular({
           <input type="checkbox" checked={einseitig} onChange={(e) => setEinseitig(e.target.checked)} className="size-5 accent-akzent" />
           Einseitig (pro Seite)
         </label>
+        {einseitig && (
+          <label className="ml-8 flex items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              checked={seitenGetrennt}
+              onChange={(e) => setSeitenGetrennt(e.target.checked)}
+              className="mt-0.5 size-5 accent-akzent"
+            />
+            <span>
+              Links und rechts getrennt eintragen
+              <span className="block text-xs text-leise">Sinnvoll bei Mobilität und Reha, um Seitenunterschiede zu sehen.</span>
+            </span>
+          </label>
+        )}
+        {modul === "kraft" && (
         <label className="flex items-start gap-3 text-sm">
           <input type="checkbox" checked={e1rm} onChange={(e) => setE1rm(e.target.checked)} className="mt-0.5 size-5 accent-akzent" />
           <span>
@@ -134,6 +181,7 @@ export function UebungFormular({
             <span className="block text-xs text-leise">Sinnvoll bei großen Grundübungen mit freiem Gewicht.</span>
           </span>
         </label>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">

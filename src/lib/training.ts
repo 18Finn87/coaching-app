@@ -31,6 +31,10 @@ export type TSatz = {
   dauer_sek: number | null;
   distanz_m: number | null;
   erledigt: boolean;
+  /** Nur bei Übungen mit getrennten Seiten */
+  seite?: "links" | "rechts" | null;
+  /** Weitere Werte späterer Module (z. B. Puls) */
+  zusatz?: Record<string, unknown>;
 };
 
 export type TUebung = {
@@ -45,6 +49,7 @@ export type TUebung = {
   // nur auf dem Handy (für die Anzeige)
   hinweis?: string;
   einseitig?: boolean;
+  seiten_getrennt?: boolean;
   saetze: TSatz[];
 };
 
@@ -172,7 +177,8 @@ export function trainingAusPlan(athletId: string, versionId: string, e: Einheit)
         notiz: "",
         hinweis: u.hinweis,
         einseitig: u.uebung?.einseitig ?? false,
-        saetze: u.plan_saetze.map((s) => ({
+        seiten_getrennt: u.uebung?.seiten_getrennt ?? false,
+        saetze: seitenAufteilen(u.uebung?.seiten_getrennt ?? false, u.plan_saetze.map((s) => ({
           id: neueId(),
           plan_satz_id: s.id,
           satznummer: s.satznummer,
@@ -194,13 +200,31 @@ export function trainingAusPlan(athletId: string, versionId: string, e: Einheit)
           dauer_sek: null,
           distanz_m: null,
           erledigt: false,
-        })),
+        }))),
       })),
     },
     geloescht: { uebungen: [], saetze: [] },
     ungespeichert: true,
     serverStatus: null,
   };
+}
+
+/** Bei getrennten Seiten wird jeder Satz zu "links" + "rechts" (gleiche Satznummer). */
+export function seitenAufteilen(getrennt: boolean, saetze: TSatz[]): TSatz[] {
+  if (!getrennt) return saetze;
+  return saetze.flatMap((s) => [
+    { ...s, seite: "links" as const },
+    { ...s, id: neueId(), seite: "rechts" as const },
+  ]);
+}
+
+/** Satznummern neu vergeben; ein Paar links/rechts behält dieselbe Nummer. */
+export function nummerieren(saetze: TSatz[]) {
+  let nr = 0;
+  for (const s of saetze) {
+    if (s.seite !== "rechts" || nr === 0) nr++;
+    s.satznummer = nr;
+  }
 }
 
 export function freiesTraining(athletId: string): LokalesTraining {
@@ -238,7 +262,7 @@ export async function vomServerLaden(id: string): Promise<{ daten: LokalesTraini
     .select(
       `id, athlet_id, planversion_id, plan_einheit_id, titel, status, gestartet_am, beendet_am, session_rpe, notiz,
        ausgefuehrte_uebungen (id, uebung_id, plan_uebung_id, reihenfolge, uebung_name, messart, ersetzt, notiz,
-         ausgefuehrte_saetze (id, plan_satz_id, satznummer, satztyp, vorgabe, wdh, last_kg, rir, dauer_sek, distanz_m, erledigt))`,
+         ausgefuehrte_saetze (id, plan_satz_id, satznummer, satztyp, vorgabe, wdh, last_kg, rir, dauer_sek, distanz_m, erledigt, seite, zusatz))`,
     )
     .eq("id", id)
     .maybeSingle();
@@ -257,7 +281,8 @@ export async function vomServerLaden(id: string): Promise<{ daten: LokalesTraini
             ...u,
             saetze: [...ausgefuehrte_saetze]
               .map((s) => ({ ...s, last_kg: s.last_kg === null ? null : Number(s.last_kg), rir: s.rir === null ? null : Number(s.rir) }))
-              .sort((a, b) => a.satznummer - b.satznummer),
+              .sort((a, b) => a.satznummer - b.satznummer || (a.seite === "rechts" ? 1 : 0) - (b.seite === "rechts" ? 1 : 0)),
+            seiten_getrennt: ausgefuehrte_saetze.some((s) => s.seite),
           })),
       },
       geloescht: { uebungen: [], saetze: [] },
@@ -350,6 +375,8 @@ async function einmalHochladen(id: string): Promise<boolean> {
           dauer_sek: s.dauer_sek,
           distanz_m: s.distanz_m,
           erledigt: s.erledigt,
+          seite: s.seite ?? null,
+          zusatz: s.zusatz ?? {},
         })),
       );
       if (saetze.length) {

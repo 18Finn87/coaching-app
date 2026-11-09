@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { Karte, Seitentitel } from "@/components/Bausteine";
+import { Stoppuhr } from "@/components/Stoppuhr";
 import { UebungAuswahl } from "@/components/UebungAuswahl";
 import { useProfil } from "@/lib/konto";
 import { zeitText } from "@/lib/plaene";
@@ -12,6 +13,8 @@ import {
   lokalLaden,
   lokalSpeichern,
   neueId,
+  nummerieren,
+  seitenAufteilen,
   vomServerLaden,
   type LokalesTraining,
   type TEinheit,
@@ -195,7 +198,8 @@ function Training({
                   ersetzt: false,
                   notiz: "",
                   einseitig: neu.einseitig,
-                  saetze: [leererSatz(1, {})],
+                  seiten_getrennt: neu.seiten_getrennt,
+                  saetze: seitenAufteilen(neu.seiten_getrennt, [leererSatz(1, {})]),
                 });
               });
             }}
@@ -341,6 +345,8 @@ function UebungKarte({
   const mitZeit = u.messart === "zeit" || u.messart === "zeit_last";
   const mitStrecke = u.messart === "distanz" || u.messart === "distanz_last";
   const mitLast = u.messart !== "wdh" && u.messart !== "zeit" && u.messart !== "distanz";
+  const seiten = u.seiten_getrennt ?? u.saetze.some((s) => s.seite);
+  const [uhr, setUhr] = useState<string | null>(null);
 
   return (
     <section className="rounded-2xl border border-rand bg-flaeche p-4">
@@ -398,6 +404,7 @@ function UebungKarte({
               <div className="mb-1 flex items-center justify-between gap-2 text-xs text-leise">
                 <span>
                   Satz {s.satznummer}
+                  {s.seite && <strong className="font-semibold text-foreground"> · {s.seite === "links" ? "links" : "rechts"}</strong>}
                   {s.satztyp !== "arbeit" ? ` · ${s.satztyp === "aufwaermen" ? "Aufwärmen" : s.satztyp}` : ""}
                   {vt ? ` · Vorgabe: ${vt}` : ""}
                 </span>
@@ -408,9 +415,11 @@ function UebungKarte({
                     onClick={() =>
                       aendern(training, (ein, weg) => {
                         const ue = ein.uebungen.find((x) => x.id === u.id)!;
-                        ue.saetze = ue.saetze.filter((x) => x.id !== s.id);
-                        ue.saetze.forEach((x, i) => (x.satznummer = i + 1));
-                        weg.saetze.push(s.id);
+                        // Bei getrennten Seiten verschwinden links und rechts gemeinsam
+                        const raus = ue.saetze.filter((x) => x.id === s.id || (s.seite && x.satznummer === s.satznummer));
+                        ue.saetze = ue.saetze.filter((x) => !raus.includes(x));
+                        nummerieren(ue.saetze);
+                        weg.saetze.push(...raus.map((x) => x.id));
                       })
                     }
                     className="px-2 text-leise"
@@ -441,6 +450,16 @@ function UebungKarte({
                     aus={!bearbeitbar}
                     setzen={(w) => satzAendern(u.id, s.id, { dauer_sek: w })}
                   />
+                )}
+                {mitZeit && bearbeitbar && (
+                  <button
+                    type="button"
+                    aria-label={`Stoppuhr für Satz ${s.satznummer}${s.seite ? ` ${s.seite}` : ""}`}
+                    onClick={() => setUhr(s.id)}
+                    className="h-12 w-12 shrink-0 rounded-xl border border-rand text-lg"
+                  >
+                    ⏱
+                  </button>
                 )}
                 {mitStrecke && (
                   <Zahl
@@ -497,9 +516,9 @@ function UebungKarte({
               aendern(training, (ein) => {
                 const ue = ein.uebungen.find((x) => x.id === u.id)!;
                 const letzter = ue.saetze[ue.saetze.length - 1];
-                const neu = leererSatz(ue.saetze.length + 1, letzter ? { ...letzter.vorgabe } : {});
+                const neu = leererSatz((letzter?.satznummer ?? 0) + 1, letzter ? { ...letzter.vorgabe } : {});
                 if (letzter) neu.last_kg = letzter.last_kg;
-                ue.saetze.push(neu);
+                ue.saetze.push(...seitenAufteilen(seiten, [neu]));
               })
             }
             className="h-10 rounded-lg border border-dashed border-rand px-3 text-sm font-medium text-leise"
@@ -548,6 +567,20 @@ function UebungKarte({
         />
       )}
       <p className="mt-2 text-[11px] text-leise">* RIR = Wiederholungen in Reserve, deine Selbsteinschätzung</p>
+      {uhr && (() => {
+        const satz = u.saetze.find((x) => x.id === uhr);
+        if (!satz) return null;
+        return (
+          <Stoppuhr
+            titel={`${u.uebung_name} · Satz ${satz.satznummer}${satz.seite ? ` ${satz.seite}` : ""}`}
+            ziel={satz.vorgabe.dauer_sek ?? null}
+            fertig={(sek) => {
+              setUhr(null);
+              if (sek != null) satzAendern(u.id, satz.id, { dauer_sek: sek });
+            }}
+          />
+        );
+      })()}
     </section>
   );
 }

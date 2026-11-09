@@ -7,12 +7,21 @@ export type AEinheit = {
   uebungen: {
     uebung_id: string;
     uebung_name: string;
+    messart?: string;
     saetze: {
       satztyp: string;
       erledigt: boolean;
       wdh: number | null;
       last_kg: number | null;
-      vorgabe: { wdh_min?: number | null; wdh_max?: number | null; last_kg?: number | null };
+      dauer_sek?: number | null;
+      distanz_m?: number | null;
+      vorgabe: {
+        wdh_min?: number | null;
+        wdh_max?: number | null;
+        last_kg?: number | null;
+        dauer_sek?: number | null;
+        distanz_m?: number | null;
+      };
     }[];
   }[];
 };
@@ -24,7 +33,16 @@ export type Punkt = {
   topKg: number | null;
   volumen: number;
   e1rm: number | null;
-  /** Sätze mit Vorgabe, bei denen Wdh. und Gewicht erreicht wurden */
+  /** Meiste Wdh. in einem Satz und Summe */
+  meisteWdh: number | null;
+  summeWdh: number;
+  /** Längste Zeit (s) in einem Satz und Summe */
+  bestZeit: number | null;
+  summeZeit: number;
+  /** Längste Strecke (m) in einem Satz und Summe */
+  bestStrecke: number | null;
+  summeStrecke: number;
+  /** Sätze mit Vorgabe, bei denen Wdh./Zeit/Strecke und Gewicht erreicht wurden */
   vorgabeErreicht: number;
   vorgabeGesamt: number;
 };
@@ -33,6 +51,8 @@ export type UebungsVerlauf = {
   uebungId: string;
   name: string;
   e1rmGeeignet: boolean;
+  /** Messart der Übung (neueste) */
+  messart: string;
   punkte: Punkt[];
 };
 
@@ -59,30 +79,54 @@ export function auswerten(
       let bestes: number | null = null;
       let erreicht = 0;
       let mitVorgabe = 0;
+      let meisteWdh: number | null = null;
+      let summeWdh = 0;
+      let bestZeit: number | null = null;
+      let summeZeit = 0;
+      let bestStrecke: number | null = null;
+      let summeStrecke = 0;
       for (const s of zaehlend) {
         const kg = s.last_kg == null ? null : Number(s.last_kg);
         if (kg != null) topKg = topKg == null ? kg : Math.max(topKg, kg);
         if (kg != null && s.wdh != null) volumen += kg * s.wdh;
+        if (s.wdh != null) {
+          meisteWdh = meisteWdh == null ? s.wdh : Math.max(meisteWdh, s.wdh);
+          summeWdh += s.wdh;
+        }
+        if (s.dauer_sek != null) {
+          bestZeit = bestZeit == null ? s.dauer_sek : Math.max(bestZeit, s.dauer_sek);
+          summeZeit += s.dauer_sek;
+        }
+        if (s.distanz_m != null) {
+          bestStrecke = bestStrecke == null ? s.distanz_m : Math.max(bestStrecke, s.distanz_m);
+          summeStrecke += s.distanz_m;
+        }
         if (geeignet) {
           const schaetzung = e1rm(kg, s.wdh, formel, maxWdh);
           if (schaetzung != null) bestes = bestes == null ? schaetzung : Math.max(bestes, schaetzung);
         }
         const zielWdh = s.vorgabe?.wdh_min ?? s.vorgabe?.wdh_max ?? null;
         const zielKg = s.vorgabe?.last_kg ?? null;
-        if (zielWdh != null || zielKg != null) {
+        const zielZeit = s.vorgabe?.dauer_sek ?? null;
+        const zielStrecke = s.vorgabe?.distanz_m ?? null;
+        if (zielWdh != null || zielKg != null || zielZeit != null || zielStrecke != null) {
           mitVorgabe++;
           const wdhOk = zielWdh == null || (s.wdh != null && s.wdh >= zielWdh);
           const kgOk = zielKg == null || (kg != null && kg >= Number(zielKg));
-          if (wdhOk && kgOk) erreicht++;
+          const zeitOk = zielZeit == null || (s.dauer_sek != null && s.dauer_sek >= zielZeit);
+          const streckeOk = zielStrecke == null || (s.distanz_m != null && s.distanz_m >= zielStrecke);
+          if (wdhOk && kgOk && zeitOk && streckeOk) erreicht++;
         }
       }
       const eintrag = nachUebung.get(u.uebung_id) ?? {
         uebungId: u.uebung_id,
         name: u.uebung_name,
         e1rmGeeignet: geeignet,
+        messart: u.messart ?? "wdh_last",
         punkte: [],
       };
       eintrag.name = u.uebung_name; // neuester Name
+      eintrag.messart = u.messart ?? eintrag.messart;
       eintrag.punkte.push({
         einheitId: e.id,
         datum: e.gestartet_am,
@@ -90,6 +134,12 @@ export function auswerten(
         topKg,
         volumen: Math.round(volumen * 10) / 10,
         e1rm: bestes,
+        meisteWdh,
+        summeWdh,
+        bestZeit,
+        summeZeit,
+        bestStrecke,
+        summeStrecke,
         vorgabeErreicht: erreicht,
         vorgabeGesamt: mitVorgabe,
       });

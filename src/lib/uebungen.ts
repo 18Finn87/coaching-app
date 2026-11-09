@@ -8,6 +8,7 @@ export type Uebung = {
   muskelgruppen: string[];
   ausstattung: string[];
   einseitig: boolean;
+  seiten_getrennt: boolean;
   messart: string;
   e1rm_geeignet: boolean;
   beschreibung: string;
@@ -18,7 +19,7 @@ export type Uebung = {
 export type UebungEingabe = Omit<Uebung, "id" | "archiviert">;
 
 const SPALTEN =
-  "id, name, modul, bewegungsmuster, muskelgruppen, ausstattung, einseitig, messart, e1rm_geeignet, beschreibung, video_link, archiviert";
+  "id, name, modul, bewegungsmuster, muskelgruppen, ausstattung, einseitig, seiten_getrennt, messart, e1rm_geeignet, beschreibung, video_link, archiviert";
 
 export const musterText: Record<string, string> = {
   kniebeuge: "Kniebeuge",
@@ -31,7 +32,50 @@ export const musterText: Record<string, string> = {
   rumpf: "Rumpf",
   tragen: "Tragen",
   isolation: "Isolation",
+  laufen: "Laufen",
+  gehen: "Gehen",
+  radfahren: "Radfahren",
+  rudern: "Rudern",
+  schwimmen: "Schwimmen",
+  ausdauer_sonstiges: "Ausdauer (sonstiges)",
+  sprinten: "Sprinten",
+  springen: "Springen",
+  werfen: "Werfen",
+  richtungswechsel: "Richtungswechsel",
+  dehnen: "Dehnen",
+  mobilisieren: "Mobilisieren",
+  halten: "Halten (isometrisch)",
   sonstiges: "Sonstiges",
+};
+
+/** Welche Bewegungsmuster zu welchem Modul passen (für die Auswahl im Formular). */
+export const musterJeModul: Record<string, string[]> = {
+  kraft: ["kniebeuge", "hueftstreckung", "ausfallschritt", "druecken_horizontal", "druecken_vertikal",
+    "ziehen_horizontal", "ziehen_vertikal", "rumpf", "tragen", "isolation", "halten", "sonstiges"],
+  ausdauer: ["laufen", "gehen", "radfahren", "rudern", "schwimmen", "ausdauer_sonstiges", "sonstiges"],
+  intervall: ["laufen", "radfahren", "rudern", "schwimmen", "sprinten", "ausdauer_sonstiges", "sonstiges"],
+  athletik: ["sprinten", "springen", "werfen", "richtungswechsel", "sonstiges"],
+  mobilitaet: ["dehnen", "mobilisieren", "halten", "sonstiges"],
+  reha: Object.keys(musterText),
+};
+
+export const modulText: Record<string, string> = {
+  kraft: "Kraft",
+  ausdauer: "Ausdauer",
+  intervall: "Intervalle",
+  athletik: "Athletik",
+  mobilitaet: "Mobilität",
+  reha: "Reha",
+};
+
+/** Standard-Messart beim Wechsel des Moduls */
+export const messartJeModul: Record<string, string> = {
+  kraft: "wdh_last",
+  ausdauer: "distanz",
+  intervall: "zeit",
+  athletik: "zeit",
+  mobilitaet: "zeit",
+  reha: "wdh",
 };
 
 export const muskelText: Record<string, string> = {
@@ -59,6 +103,11 @@ export const geraetText: Record<string, string> = {
   kabelzug: "Kabelzug",
   koerpergewicht: "Körpergewicht",
   baender: "Bänder",
+  ausdauergeraet: "Ausdauergerät",
+  medizinball: "Medizinball",
+  box: "Box / Kasten",
+  matte: "Matte",
+  faszienrolle: "Faszienrolle",
   sonstiges: "Sonstiges",
 };
 

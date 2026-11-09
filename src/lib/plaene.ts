@@ -41,7 +41,7 @@ export type PlanUebung = {
   gruppe: string | null;
   hinweis: string;
   uebung_id: string;
-  uebung: { name: string; messart: string; einseitig: boolean } | null;
+  uebung: { name: string; messart: string; einseitig: boolean; seiten_getrennt?: boolean } | null;
   plan_saetze: Satz[];
 };
 
@@ -76,7 +76,7 @@ export async function versionInhaltLaden(versionId: string): Promise<{ daten: Ei
     .select(
       `id, name, reihenfolge, notiz,
        plan_uebungen (id, reihenfolge, gruppe, hinweis, uebung_id,
-         uebung:uebungen (name, messart, einseitig),
+         uebung:uebungen (name, messart, einseitig, seiten_getrennt),
          plan_saetze (${SATZ_SPALTEN}))`,
     )
     .eq("planversion_id", versionId)

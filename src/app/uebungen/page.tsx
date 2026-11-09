@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Karte, NurFuer, Seitentitel } from "@/components/Bausteine";
 import { UebungFormular } from "@/components/UebungFormular";
-import { geraetText, musterText, uebungenLaden, type Uebung } from "@/lib/uebungen";
+import { geraetText, modulText, musterText, uebungenLaden, type Uebung } from "@/lib/uebungen";
 
 export default function UebungenSeite() {
   return (
@@ -29,6 +29,7 @@ function Bibliothek() {
   const [uebungen, setUebungen] = useState<Uebung[] | null>(null);
   const [ladeFehler, setLadeFehler] = useState(false);
   const [suche, setSuche] = useState("");
+  const [modul, setModul] = useState("");
   const [muster, setMuster] = useState("");
   const [geraet, setGeraet] = useState("");
   const [archivZeigen, setArchivZeigen] = useState(false);
@@ -51,10 +52,11 @@ function Bibliothek() {
       (u) =>
         u.archiviert === archivZeigen &&
         (!s || normal(u.name).includes(s)) &&
+        (!modul || u.modul === modul) &&
         (!muster || u.bewegungsmuster === muster) &&
         (!geraet || u.ausstattung.includes(geraet)),
     );
-  }, [uebungen, suche, muster, geraet, archivZeigen]);
+  }, [uebungen, suche, modul, muster, geraet, archivZeigen]);
 
   const auswahl =
     "h-11 w-full rounded-xl border border-rand bg-background px-3 text-sm outline-none focus:border-akzent";
@@ -100,6 +102,14 @@ function Bibliothek() {
             className="h-12 w-full rounded-xl border border-rand bg-background px-3 text-base outline-none focus:border-akzent"
           />
           <div className="grid grid-cols-2 gap-2">
+            <select aria-label="Bereich" value={modul} onChange={(e) => setModul(e.target.value)} className={`${auswahl} col-span-2`}>
+              <option value="">Alle Bereiche</option>
+              {Object.entries(modulText).map(([w, t]) => (
+                <option key={w} value={w}>
+                  {t}
+                </option>
+              ))}
+            </select>
             <select aria-label="Bewegungsmuster" value={muster} onChange={(e) => setMuster(e.target.value)} className={auswahl}>
               <option value="">Alle Bewegungen</option>
               {Object.entries(musterText).map(([w, t]) => (
@@ -151,6 +161,7 @@ function Bibliothek() {
                       <span className="min-w-0">
                         <span className="block truncate font-medium">{u.name}</span>
                         <span className="block truncate text-sm text-leise">
+                          {u.modul !== "kraft" && `${modulText[u.modul] ?? u.modul} · `}
                           {musterText[u.bewegungsmuster]}
                           {u.ausstattung.length > 0 && ` · ${u.ausstattung.map((g) => geraetText[g]).join(", ")}`}
                         </span>
