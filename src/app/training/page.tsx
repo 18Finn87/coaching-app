@@ -385,7 +385,11 @@ function UebungKarte({
 
       <div className="flex flex-col gap-2">
         {u.saetze.map((s) => {
-          const vt = vorgabeText(s.vorgabe, u.messart);
+          // Bei getauschter Übung passt das geplante Gewicht nicht – nur Wdh./RIR zeigen
+          const vt = vorgabeText(
+            u.ersetzt ? { ...s.vorgabe, last_kg: null, last_prozent: null } : s.vorgabe,
+            u.messart,
+          );
           return (
             <div
               key={s.id}
@@ -537,6 +541,8 @@ function UebungKarte({
               ue.messart = neu.messart;
               ue.einseitig = neu.einseitig;
               ue.ersetzt = ue.plan_uebung_id !== null;
+              // Das Gewicht der alten Übung passt nicht zur neuen: offene Sätze leeren
+              for (const s of ue.saetze) if (!s.erledigt) s.last_kg = null;
             });
           }}
         />
