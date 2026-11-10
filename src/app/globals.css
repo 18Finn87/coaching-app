@@ -36,6 +36,7 @@
   --color-akzent: var(--akzent);
   --color-akzent-text: var(--akzent-text);
   --color-diagramm: var(--diagramm);
+  --color-diagramm-2: var(--diagramm-2);
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
 }
 

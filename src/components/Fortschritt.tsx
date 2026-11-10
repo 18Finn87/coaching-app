@@ -416,11 +416,28 @@ function SeitenUnterschied({
   if (!l) return null;
   const r = rechts.find((x) => x.datum === l.datum)!;
   const diff = Math.round(Math.abs(l.wert - r.wert) * 10) / 10;
-  if (diff === 0) return <p className="mt-2 text-sm text-leise">Zuletzt beide Seiten gleich.</p>;
   const besser = (kleinerBesser ? l.wert < r.wert : l.wert > r.wert) ? "links" : "rechts";
   return (
-    <p className="mt-2 text-sm text-leise">
-      Zuletzt {zahl(diff)} {einheit} Unterschied, {besser} besser.
-    </p>
+    <div className="mt-3 flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex items-center gap-2 rounded-xl border border-rand px-3 py-2">
+          <span aria-hidden className="size-3 shrink-0 rounded-full bg-diagramm" />
+          <span className="text-sm">
+            links <strong className="tabular-nums">{zahl(l.wert)} {einheit}</strong>
+          </span>
+        </div>
+        <div className="flex items-center gap-2 rounded-xl border border-rand px-3 py-2">
+          <span aria-hidden className="size-3 shrink-0 bg-diagramm-2" />
+          <span className="text-sm">
+            rechts <strong className="tabular-nums">{zahl(r.wert)} {einheit}</strong>
+          </span>
+        </div>
+      </div>
+      <p className="text-sm text-leise">
+        {diff === 0
+          ? `Am ${datum(l.datum)} beide Seiten gleich.`
+          : `Am ${datum(l.datum)}: ${zahl(diff)} ${einheit} Unterschied, ${besser} besser.`}
+      </p>
+    </div>
   );
 }
