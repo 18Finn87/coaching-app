@@ -29,14 +29,17 @@ function schoeneSchritte(min: number, max: number): number[] {
 const zahl = (n: number) => n.toLocaleString("de-DE", { maximumFractionDigits: 1 });
 
 /**
- * Einfaches Liniendiagramm über die Zeit (eine Messgröße, eine Achse).
- * Punkte lassen sich antippen; darunter gibt es die Werte als Tabelle.
- * Optional: zusätzliche Markierungen (z. B. getestete Maximalwerte) als Raute.
+ * Liniendiagramm über die Zeit (eine Messgröße, eine Achse).
+ * Optional eine zweite Linie derselben Größe (z. B. rechts neben links) in einer
+ * zweiten, geprüften Farbe und mit eckigen Punkten, damit sie auch ohne Farbe
+ * unterscheidbar ist. Punkte lassen sich antippen; darunter gibt es die Werte als Tabelle.
+ * Optional: Markierungen (z. B. getestete Maximalwerte) als Raute.
  */
 export function Liniendiagramm({
   titel,
   einheit,
   punkte,
+  reihe2,
   markierungen = [],
   hinweis,
   linienName,
@@ -45,19 +48,21 @@ export function Liniendiagramm({
   titel: string;
   einheit: string;
   punkte: Datenpunkt[];
+  reihe2?: { name: string; punkte: Datenpunkt[] };
   markierungen?: Markierung[];
   hinweis?: string;
   linienName?: string;
   markierungsName?: string;
 }) {
-  const [aktiv, setAktiv] = useState<number | null>(null);
+  const [aktiv, setAktiv] = useState<string | null>(null);
   const [tabelle, setTabelle] = useState(false);
   const tabellenId = useId();
 
-  const alle = [...punkte.map((p) => p.wert), ...markierungen.map((m) => m.wert)];
-  if (punkte.length === 0 && markierungen.length === 0) return null;
+  const punkte2 = reihe2?.punkte ?? [];
+  const alle = [...punkte.map((p) => p.wert), ...punkte2.map((p) => p.wert), ...markierungen.map((m) => m.wert)];
+  if (alle.length === 0) return null;
 
-  const zeiten = [...punkte, ...markierungen].map((p) => Date.parse(p.datum));
+  const zeiten = [...punkte, ...punkte2, ...markierungen].map((p) => Date.parse(p.datum));
   let tMin = Math.min(...zeiten);
   let tMax = Math.max(...zeiten);
   if (tMin === tMax) {
@@ -69,23 +74,35 @@ export function Liniendiagramm({
   const yMax = ticks[ticks.length - 1];
   const x = (d: string) => RAND.links + ((Date.parse(d) - tMin) / (tMax - tMin)) * (B - RAND.links - RAND.rechts);
   const y = (v: number) => RAND.oben + (1 - (v - yMin) / (yMax - yMin || 1)) * (H - RAND.oben - RAND.unten);
-  const pfad = punkte.map((p, i) => `${i === 0 ? "M" : "L"}${x(p.datum).toFixed(1)},${y(p.wert).toFixed(1)}`).join(" ");
-  const zweiReihen = markierungen.length > 0 && punkte.length > 0;
-  const a = aktiv !== null ? punkte[aktiv] : null;
+  const pfad = (liste: Datenpunkt[]) =>
+    liste.map((p, i) => `${i === 0 ? "M" : "L"}${x(p.datum).toFixed(1)},${y(p.wert).toFixed(1)}`).join(" ");
+
+  // Alle Zeitpunkte (für Antippen und Tabelle)
+  const daten = [...new Set([...punkte, ...punkte2].map((p) => p.datum))].sort();
+  const wertBei = (liste: Datenpunkt[], d: string) => liste.find((p) => p.datum === d)?.wert;
+  const legende = (markierungen.length > 0 && punkte.length > 0) || !!reihe2;
+  const letzter1 = punkte[punkte.length - 1];
+  const letzter2 = punkte2[punkte2.length - 1];
 
   return (
     <figure className="flex flex-col gap-2">
       <figcaption className="flex items-baseline justify-between gap-2">
         <span className="font-medium">{titel}</span>
-        {punkte.length > 0 && (
-          <span className="text-sm text-leise">
-            zuletzt {zahl(punkte[punkte.length - 1].wert)} {einheit}
+        {(letzter1 || letzter2) && (
+          <span className="text-right text-sm text-leise">
+            zuletzt{" "}
+            {reihe2
+              ? [letzter1 && `${linienName ?? ""} ${zahl(letzter1.wert)}`, letzter2 && `${reihe2.name} ${zahl(letzter2.wert)}`]
+                  .filter(Boolean)
+                  .join(" · ")
+              : zahl(letzter1!.wert)}{" "}
+            {einheit}
           </span>
         )}
       </figcaption>
       {hinweis && <p className="-mt-1 text-xs text-leise">{hinweis}</p>}
 
-      {zweiReihen && (
+      {legende && (
         <ul className="flex flex-wrap gap-4 text-xs text-leise" aria-label="Legende">
           <li className="flex items-center gap-1.5">
             <svg width="18" height="10" aria-hidden>
@@ -94,12 +111,23 @@ export function Liniendiagramm({
             </svg>
             {linienName}
           </li>
-          <li className="flex items-center gap-1.5">
-            <svg width="12" height="12" aria-hidden>
-              <rect x="2" y="2" width="8" height="8" transform="rotate(45 6 6)" fill="var(--foreground)" />
-            </svg>
-            {markierungsName}
-          </li>
+          {reihe2 && (
+            <li className="flex items-center gap-1.5">
+              <svg width="18" height="10" aria-hidden>
+                <line x1="0" y1="5" x2="18" y2="5" stroke="var(--diagramm-2)" strokeWidth="2" />
+                <rect x="5.5" y="1.5" width="7" height="7" fill="var(--diagramm-2)" />
+              </svg>
+              {reihe2.name}
+            </li>
+          )}
+          {markierungen.length > 0 && (
+            <li className="flex items-center gap-1.5">
+              <svg width="12" height="12" aria-hidden>
+                <rect x="2" y="2" width="8" height="8" transform="rotate(45 6 6)" fill="var(--foreground)" />
+              </svg>
+              {markierungsName}
+            </li>
+          )}
         </ul>
       )}
 
@@ -108,7 +136,7 @@ export function Liniendiagramm({
           viewBox={`0 0 ${B} ${H}`}
           className="h-auto w-full touch-pan-y"
           role="img"
-          aria-label={`${titel}: ${punkte.length} Werte von ${zahl(Math.min(...alle))} bis ${zahl(Math.max(...alle))} ${einheit}`}
+          aria-label={`${titel}: ${daten.length} Werte von ${zahl(Math.min(...alle))} bis ${zahl(Math.max(...alle))} ${einheit}`}
           onMouseLeave={() => setAktiv(null)}
         >
           {ticks.map((t) => (
@@ -126,10 +154,10 @@ export function Liniendiagramm({
             {datum(new Date(tMax).toISOString())}
           </text>
 
-          {a && (
+          {aktiv && (
             <line
-              x1={x(a.datum)}
-              x2={x(a.datum)}
+              x1={x(aktiv)}
+              x2={x(aktiv)}
               y1={RAND.oben}
               y2={H - RAND.unten}
               stroke="var(--leise)"
@@ -138,19 +166,37 @@ export function Liniendiagramm({
             />
           )}
           {punkte.length > 1 && (
-            <path d={pfad} fill="none" stroke="var(--diagramm)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+            <path d={pfad(punkte)} fill="none" stroke="var(--diagramm)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+          )}
+          {punkte2.length > 1 && (
+            <path d={pfad(punkte2)} fill="none" stroke="var(--diagramm-2)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
           )}
           {punkte.map((p, i) => (
             <circle
               key={p.datum + i}
               cx={x(p.datum)}
               cy={y(p.wert)}
-              r={aktiv === i ? 6 : 4.5}
+              r={aktiv === p.datum ? 6 : 4.5}
               fill="var(--diagramm)"
               stroke="var(--flaeche)"
               strokeWidth="2"
             />
           ))}
+          {punkte2.map((p, i) => {
+            const g = aktiv === p.datum ? 11 : 9;
+            return (
+              <rect
+                key={"r" + p.datum + i}
+                x={x(p.datum) - g / 2}
+                y={y(p.wert) - g / 2}
+                width={g}
+                height={g}
+                fill="var(--diagramm-2)"
+                stroke="var(--flaeche)"
+                strokeWidth="2"
+              />
+            );
+          })}
           {markierungen.map((m, i) => (
             <rect
               key={m.datum + i}
@@ -167,32 +213,40 @@ export function Liniendiagramm({
             </rect>
           ))}
           {/* Große, unsichtbare Trefferflächen zum Antippen */}
-          {punkte.map((p, i) => (
+          {daten.map((d) => (
             <rect
-              key={"t" + i}
-              x={x(p.datum) - 18}
+              key={"t" + d}
+              x={x(d) - 18}
               y={RAND.oben}
               width="36"
               height={H - RAND.oben - RAND.unten}
               fill="transparent"
-              onMouseEnter={() => setAktiv(i)}
-              onClick={() => setAktiv(aktiv === i ? null : i)}
+              onMouseEnter={() => setAktiv(d)}
+              onClick={() => setAktiv(aktiv === d ? null : d)}
             />
           ))}
         </svg>
-        {a && (
+        {aktiv && (
           <div
             role="status"
             className="pointer-events-none absolute top-1 rounded-lg border border-rand bg-flaeche px-2.5 py-1.5 text-xs shadow"
             style={{
-              left: `${(x(a.datum) / B) * 100}%`,
-              transform: x(a.datum) > B * 0.6 ? "translateX(-105%)" : "translateX(8%)",
+              left: `${(x(aktiv) / B) * 100}%`,
+              transform: x(aktiv) > B * 0.6 ? "translateX(-105%)" : "translateX(8%)",
             }}
           >
-            <span className="block text-leise">{datum(a.datum)}</span>
-            <span className="font-semibold">
-              {zahl(a.wert)} {einheit}
-            </span>
+            <span className="block text-leise">{datum(aktiv)}</span>
+            {[
+              { name: reihe2 ? linienName : undefined, wert: wertBei(punkte, aktiv) },
+              ...(reihe2 ? [{ name: reihe2.name, wert: wertBei(punkte2, aktiv) }] : []),
+            ]
+              .filter((z) => z.wert !== undefined)
+              .map((z) => (
+                <span key={z.name ?? "w"} className="block font-semibold">
+                  {z.name ? `${z.name}: ` : ""}
+                  {zahl(z.wert!)} {einheit}
+                </span>
+              ))}
           </div>
         )}
       </div>
@@ -211,21 +265,32 @@ export function Liniendiagramm({
           <thead>
             <tr className="text-left text-leise">
               <th className="py-1 font-normal">Datum</th>
-              <th className="py-1 text-right font-normal">{titel}</th>
+              <th className="py-1 text-right font-normal">{reihe2 ? linienName : titel}</th>
+              {reihe2 && <th className="py-1 text-right font-normal">{reihe2.name}</th>}
             </tr>
           </thead>
           <tbody>
-            {[...punkte.map((p) => ({ ...p, text: "" })), ...markierungen.map((m) => ({ datum: m.datum, wert: m.wert, text: m.text }))]
-              .sort((p, q) => p.datum.localeCompare(q.datum))
-              .map((p, i) => (
-                <tr key={i} className="border-t border-rand">
-                  <td className="py-1">{datum(p.datum)}</td>
-                  <td className="py-1 text-right tabular-nums">
-                    {zahl(p.wert)} {einheit}
-                    {p.text && <span className="ml-1 text-xs text-leise">({p.text})</span>}
-                  </td>
+            {daten.map((d) => {
+              const w1 = wertBei(punkte, d);
+              const w2 = wertBei(punkte2, d);
+              return (
+                <tr key={d} className="border-t border-rand">
+                  <td className="py-1">{datum(d)}</td>
+                  <td className="py-1 text-right tabular-nums">{w1 !== undefined ? `${zahl(w1)} ${einheit}` : "–"}</td>
+                  {reihe2 && (
+                    <td className="py-1 text-right tabular-nums">{w2 !== undefined ? `${zahl(w2)} ${einheit}` : "–"}</td>
+                  )}
                 </tr>
-              ))}
+              );
+            })}
+            {markierungen.map((m, i) => (
+              <tr key={"m" + i} className="border-t border-rand">
+                <td className="py-1">{datum(m.datum)}</td>
+                <td className="py-1 text-right tabular-nums" colSpan={reihe2 ? 2 : 1}>
+                  {zahl(m.wert)} {einheit} <span className="ml-1 text-xs text-leise">({m.text})</span>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       )}

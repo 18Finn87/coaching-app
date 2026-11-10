@@ -8,6 +8,7 @@ import { Stoppuhr } from "@/components/Stoppuhr";
 import { UebungAuswahl } from "@/components/UebungAuswahl";
 import { useProfil } from "@/lib/konto";
 import { zeitText } from "@/lib/plaene";
+import { hatLast } from "@/lib/uebungen";
 import {
   hochladen,
   lokalLaden,
@@ -316,7 +317,7 @@ function vorgabeText(v: Vorgabe, messart: string): string {
   else if (v.wdh_min || v.wdh_max) teile.push(`${v.wdh_min ?? v.wdh_max} Wdh.`);
   if (v.dauer_sek) teile.push(zeitText(v.dauer_sek));
   if (v.distanz_m) teile.push(`${v.distanz_m} m`);
-  if (v.last_kg != null && messart !== "wdh" && messart !== "zeit" && messart !== "distanz") teile.push(`${v.last_kg} kg`);
+  if (v.last_kg != null && hatLast(messart)) teile.push(`${v.last_kg} kg`);
   if (v.last_prozent) teile.push(`${v.last_prozent} % 1RM`);
   if (v.rir_ziel != null) teile.push(`RIR ${v.rir_ziel}`);
   if (v.tempo) teile.push(`Tempo ${v.tempo}`);
@@ -344,7 +345,8 @@ function UebungKarte({
   const mitWdh = u.messart === "wdh_last" || u.messart === "wdh";
   const mitZeit = u.messart === "zeit" || u.messart === "zeit_last";
   const mitStrecke = u.messart === "distanz" || u.messart === "distanz_last";
-  const mitLast = u.messart !== "wdh" && u.messart !== "zeit" && u.messart !== "distanz";
+  const mitLast = hatLast(u.messart);
+  const mitMesswert = u.messart === "umfang";
   const seiten = u.seiten_getrennt ?? u.saetze.some((s) => s.seite);
   const [uhr, setUhr] = useState<string | null>(null);
 
@@ -482,6 +484,18 @@ function UebungKarte({
                     setzen={(w) => satzAendern(u.id, s.id, { last_kg: w })}
                   />
                 )}
+                {mitMesswert && (
+                  <Zahl
+                    label="cm"
+                    wert={s.messwert ?? null}
+                    platzhalter=""
+                    min={-1000}
+                    max={10000}
+                    aus={!bearbeitbar}
+                    setzen={(w) => satzAendern(u.id, s.id, { messwert: w })}
+                  />
+                )}
+                {!mitMesswert && (
                 <Zahl
                   label="RIR*"
                   wert={s.rir}
@@ -490,6 +504,7 @@ function UebungKarte({
                   aus={!bearbeitbar}
                   setzen={(w) => satzAendern(u.id, s.id, { rir: w })}
                 />
+                )}
                 <button
                   type="button"
                   disabled={!bearbeitbar}
@@ -566,7 +581,11 @@ function UebungKarte({
           }}
         />
       )}
-      <p className="mt-2 text-[11px] text-leise">* RIR = Wiederholungen in Reserve, deine Selbsteinschätzung</p>
+      {u.messart === "umfang" ? (
+        <p className="mt-2 text-[11px] text-leise">Messwert in cm. Minuswerte mit „-“ eingeben (z. B. -3).</p>
+      ) : (
+        <p className="mt-2 text-[11px] text-leise">* RIR = Wiederholungen in Reserve, deine Selbsteinschätzung</p>
+      )}
       {uhr && (() => {
         const satz = u.saetze.find((x) => x.id === uhr);
         if (!satz) return null;
@@ -590,6 +609,7 @@ function Zahl({
   wert,
   platzhalter,
   ganz,
+  min = 0,
   max,
   aus,
   setzen,
@@ -598,6 +618,7 @@ function Zahl({
   wert: number | null;
   platzhalter: string;
   ganz?: boolean;
+  min?: number;
   max: number;
   aus: boolean;
   setzen: (w: number | null) => void;
@@ -607,14 +628,14 @@ function Zahl({
       <span className="text-[11px] text-leise">{label}</span>
       <input
         key={`${label}-${wert}`}
-        inputMode={ganz ? "numeric" : "decimal"}
+        inputMode={ganz ? "numeric" : min < 0 ? "text" : "decimal"}
         defaultValue={wert ?? ""}
         placeholder={platzhalter}
         disabled={aus}
         onBlur={(ev) => {
           const text = ev.target.value.trim().replace(",", ".");
           const neu = text === "" ? null : Number(text);
-          if (neu !== null && (Number.isNaN(neu) || neu < 0 || neu > max || (ganz && !Number.isInteger(neu)))) {
+          if (neu !== null && (Number.isNaN(neu) || neu < min || neu > max || (ganz && !Number.isInteger(neu)))) {
             ev.target.value = wert?.toString() ?? "";
             return;
           }

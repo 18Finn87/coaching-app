@@ -65,6 +65,65 @@ describe("auswerten für Zeit, Strecke und Wiederholungen", () => {
     expect(p.vorgabeErreicht).toBe(1);
   });
 
+  it("Getrennte Seiten: Bestwert je Seite", () => {
+    const mit = auswerten(
+      [
+        {
+          id: "e9",
+          gestartet_am: "2026-11-10T10:00:00Z",
+          uebungen: [
+            {
+              uebung_id: "stretch2",
+              uebung_name: "Couch-Stretch",
+              messart: "zeit",
+              saetze: [
+                satz({ dauer_sek: 60, seite: "links" }),
+                satz({ dauer_sek: 45, seite: "rechts" }),
+                satz({ dauer_sek: 50, seite: "rechts" }),
+              ],
+            },
+          ],
+        },
+      ],
+      () => false,
+      "epley",
+      10,
+    )[0].punkte[0];
+    expect(mit.seiten?.links?.bestZeit).toBe(60);
+    expect(mit.seiten?.rechts?.bestZeit).toBe(50);
+  });
+
+  it("Messwert: kleiner ist besser (z. B. Finger-Boden-Abstand), Minuswerte erlaubt", () => {
+    const e: AEinheit[] = [
+      {
+        id: "m1",
+        gestartet_am: "2026-11-10T10:00:00Z",
+        uebungen: [
+          {
+            uebung_id: "fba",
+            uebung_name: "Finger-Boden-Abstand",
+            messart: "umfang",
+            saetze: [satz({ messwert: 4 }), satz({ messwert: -2.5 })],
+          },
+          {
+            uebung_id: "kzw",
+            uebung_name: "Knie-zur-Wand",
+            messart: "umfang",
+            saetze: [satz({ messwert: 9.5, seite: "links" }), satz({ messwert: 12, seite: "rechts" }), satz({ messwert: 11, seite: "rechts" })],
+          },
+        ],
+      },
+    ];
+    const erg = auswerten(e, () => false, "epley", 10, (id) => id === "fba");
+    const fba = erg.find((x) => x.uebungId === "fba")!.punkte[0];
+    const kzw = erg.find((x) => x.uebungId === "kzw")!.punkte[0];
+    expect(fba.messwert).toBe(-2.5);
+    expect(kzw.messwert).toBe(12);
+    expect(kzw.seiten?.links?.messwert).toBe(9.5);
+    expect(kzw.seiten?.rechts?.messwert).toBe(12);
+    expect(fba.seiten).toBeNull();
+  });
+
   it("Nur Wiederholungen: meiste Wdh. und Summe", () => {
     const p = finde("lieg");
     expect(p.meisteWdh).toBe(20);

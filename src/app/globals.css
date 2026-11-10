@@ -10,6 +10,7 @@
   --akzent: #2563eb;
   --akzent-text: #ffffff;
   --diagramm: #2563eb;
+  --diagramm-2: #eb6834; /* zweite Linie (z. B. rechts), mit Blau auf Farbschwäche geprüft */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,6 +23,7 @@
     --akzent: #60a5fa;
     --akzent-text: #0b0f14;
     --diagramm: #4a8ff7;
+    --diagramm-2: #d95926;
   }
 }
 

@@ -15,6 +15,8 @@ export type AEinheit = {
       last_kg: number | null;
       dauer_sek?: number | null;
       distanz_m?: number | null;
+      messwert?: number | null;
+      seite?: string | null;
       vorgabe: {
         wdh_min?: number | null;
         wdh_max?: number | null;
@@ -24,6 +26,13 @@ export type AEinheit = {
       };
     }[];
   }[];
+};
+
+export type Seitenwerte = {
+  bestZeit: number | null;
+  meisteWdh: number | null;
+  bestStrecke: number | null;
+  messwert: number | null;
 };
 
 export type Punkt = {
@@ -42,6 +51,10 @@ export type Punkt = {
   /** Längste Strecke (m) in einem Satz und Summe */
   bestStrecke: number | null;
   summeStrecke: number;
+  /** Bester Messwert (bei „kleiner ist besser“ der kleinste) */
+  messwert: number | null;
+  /** Bestwerte je Seite, wenn links und rechts getrennt eingetragen wurden */
+  seiten: Record<"links" | "rechts", Seitenwerte | null> | null;
   /** Sätze mit Vorgabe, bei denen Wdh./Zeit/Strecke und Gewicht erreicht wurden */
   vorgabeErreicht: number;
   vorgabeGesamt: number;
@@ -65,6 +78,7 @@ export function auswerten(
   e1rmGeeignet: (uebungId: string) => boolean,
   formel: Formel,
   maxWdh: number,
+  kleinerBesser: (uebungId: string) => boolean = () => false,
 ): UebungsVerlauf[] {
   const nachUebung = new Map<string, UebungsVerlauf>();
   const sortiert = [...einheiten].sort((a, b) => a.gestartet_am.localeCompare(b.gestartet_am));
@@ -85,7 +99,20 @@ export function auswerten(
       let summeZeit = 0;
       let bestStrecke: number | null = null;
       let summeStrecke = 0;
+      const kleiner = kleinerBesser(u.uebung_id);
+      const besserMess = (a: number | null, b: number) => (a == null ? b : kleiner ? Math.min(a, b) : Math.max(a, b));
+      let messwert: number | null = null;
+      const seiten: Record<"links" | "rechts", Seitenwerte | null> = { links: null, rechts: null };
       for (const s of zaehlend) {
+        const mw = s.messwert == null ? null : Number(s.messwert);
+        if (mw != null) messwert = besserMess(messwert, mw);
+        if (s.seite === "links" || s.seite === "rechts") {
+          const w = (seiten[s.seite] ??= { bestZeit: null, meisteWdh: null, bestStrecke: null, messwert: null });
+          if (s.dauer_sek != null) w.bestZeit = Math.max(w.bestZeit ?? s.dauer_sek, s.dauer_sek);
+          if (s.wdh != null) w.meisteWdh = Math.max(w.meisteWdh ?? s.wdh, s.wdh);
+          if (s.distanz_m != null) w.bestStrecke = Math.max(w.bestStrecke ?? s.distanz_m, s.distanz_m);
+          if (mw != null) w.messwert = besserMess(w.messwert, mw);
+        }
         const kg = s.last_kg == null ? null : Number(s.last_kg);
         if (kg != null) topKg = topKg == null ? kg : Math.max(topKg, kg);
         if (kg != null && s.wdh != null) volumen += kg * s.wdh;
@@ -140,6 +167,8 @@ export function auswerten(
         summeZeit,
         bestStrecke,
         summeStrecke,
+        messwert,
+        seiten: seiten.links || seiten.rechts ? seiten : null,
         vorgabeErreicht: erreicht,
         vorgabeGesamt: mitVorgabe,
       });

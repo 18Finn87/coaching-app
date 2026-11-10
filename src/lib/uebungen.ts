@@ -9,6 +9,7 @@ export type Uebung = {
   ausstattung: string[];
   einseitig: boolean;
   seiten_getrennt: boolean;
+  kleiner_besser: boolean;
   messart: string;
   e1rm_geeignet: boolean;
   beschreibung: string;
@@ -19,7 +20,7 @@ export type Uebung = {
 export type UebungEingabe = Omit<Uebung, "id" | "archiviert">;
 
 const SPALTEN =
-  "id, name, modul, bewegungsmuster, muskelgruppen, ausstattung, einseitig, seiten_getrennt, messart, e1rm_geeignet, beschreibung, video_link, archiviert";
+  "id, name, modul, bewegungsmuster, muskelgruppen, ausstattung, einseitig, seiten_getrennt, kleiner_besser, messart, e1rm_geeignet, beschreibung, video_link, archiviert";
 
 export const musterText: Record<string, string> = {
   kniebeuge: "Kniebeuge",
@@ -118,7 +119,12 @@ export const messartText: Record<string, string> = {
   zeit_last: "Zeit × Gewicht",
   distanz: "Strecke",
   distanz_last: "Strecke × Gewicht",
+  umfang: "Messwert in cm (Messtest)",
 };
+
+/** Wird bei dieser Messart ein Gewicht eingetragen? */
+export const hatLast = (messart: string) =>
+  messart === "wdh_last" || messart === "zeit_last" || messart === "distanz_last";
 
 export async function uebungenLaden(): Promise<{ daten: Uebung[]; fehler: boolean }> {
   const { data, error } = await supabase().from("uebungen").select(SPALTEN).order("name");

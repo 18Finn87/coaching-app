@@ -30,6 +30,8 @@ export type TSatz = {
   rir: number | null;
   dauer_sek: number | null;
   distanz_m: number | null;
+  /** Messtests (z. B. cm) */
+  messwert?: number | null;
   erledigt: boolean;
   /** Nur bei Übungen mit getrennten Seiten */
   seite?: "links" | "rechts" | null;
@@ -262,7 +264,7 @@ export async function vomServerLaden(id: string): Promise<{ daten: LokalesTraini
     .select(
       `id, athlet_id, planversion_id, plan_einheit_id, titel, status, gestartet_am, beendet_am, session_rpe, notiz,
        ausgefuehrte_uebungen (id, uebung_id, plan_uebung_id, reihenfolge, uebung_name, messart, ersetzt, notiz,
-         ausgefuehrte_saetze (id, plan_satz_id, satznummer, satztyp, vorgabe, wdh, last_kg, rir, dauer_sek, distanz_m, erledigt, seite, zusatz))`,
+         ausgefuehrte_saetze (id, plan_satz_id, satznummer, satztyp, vorgabe, wdh, last_kg, rir, dauer_sek, distanz_m, messwert, erledigt, seite, zusatz))`,
     )
     .eq("id", id)
     .maybeSingle();
@@ -280,7 +282,12 @@ export async function vomServerLaden(id: string): Promise<{ daten: LokalesTraini
           .map(({ ausgefuehrte_saetze, ...u }) => ({
             ...u,
             saetze: [...ausgefuehrte_saetze]
-              .map((s) => ({ ...s, last_kg: s.last_kg === null ? null : Number(s.last_kg), rir: s.rir === null ? null : Number(s.rir) }))
+              .map((s) => ({
+                ...s,
+                last_kg: s.last_kg === null ? null : Number(s.last_kg),
+                rir: s.rir === null ? null : Number(s.rir),
+                messwert: s.messwert == null ? null : Number(s.messwert),
+              }))
               .sort((a, b) => a.satznummer - b.satznummer || (a.seite === "rechts" ? 1 : 0) - (b.seite === "rechts" ? 1 : 0)),
             seiten_getrennt: ausgefuehrte_saetze.some((s) => s.seite),
           })),
@@ -374,6 +381,7 @@ async function einmalHochladen(id: string): Promise<boolean> {
           rir: s.rir,
           dauer_sek: s.dauer_sek,
           distanz_m: s.distanz_m,
+          messwert: s.messwert ?? null,
           erledigt: s.erledigt,
           seite: s.seite ?? null,
           zusatz: s.zusatz ?? {},

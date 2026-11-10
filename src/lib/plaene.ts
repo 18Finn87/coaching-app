@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { hatLast } from "./uebungen";
 
 export type Plan = {
   id: string;
@@ -98,13 +99,13 @@ export function satzText(s: Satz, messart = "wdh_last"): string {
   else if (s.wdh_min || s.wdh_max) teile.push(`${s.wdh_min ?? s.wdh_max} Wdh.`);
   if (s.dauer_sek) teile.push(zeitText(s.dauer_sek));
   if (s.distanz_m) teile.push(`${s.distanz_m} m`);
-  if (s.last_kg !== null && messart !== "wdh" && messart !== "zeit" && messart !== "distanz")
+  if (s.last_kg !== null && hatLast(messart))
     teile.push(`${zahl(s.last_kg)} kg`);
   if (s.last_prozent) teile.push(`${zahl(s.last_prozent)} % 1RM`);
   if (s.rir_ziel !== null) teile.push(`RIR ${zahl(s.rir_ziel)}`);
   if (s.tempo) teile.push(`Tempo ${s.tempo}`);
   if (s.pause_sek) teile.push(`Pause ${zeitText(s.pause_sek)}`);
-  return teile.join(" · ") || "ohne Vorgabe";
+  return teile.join(" · ") || (messart === "umfang" ? "messen (cm)" : "ohne Vorgabe");
 }
 
 export function zeitText(sek: number): string {

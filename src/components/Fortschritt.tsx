@@ -16,6 +16,7 @@ const zahl = (n: number) => n.toLocaleString("de-DE", { maximumFractionDigits: 1
 export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: string }) {
   const [einheiten, setEinheiten] = useState<AEinheit[] | null>(null);
   const [geeignet, setGeeignet] = useState<Set<string>>(new Set());
+  const [kleiner, setKleiner] = useState<Set<string>>(new Set());
   const [formel, setFormel] = useState<Formel>(STANDARD_FORMEL);
   const [maxWdh, setMaxWdh] = useState(STANDARD_MAX_WDH);
   const [tests, setTests] = useState<Maxtest[]>([]);
@@ -28,13 +29,13 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
       sb
         .from("trainingseinheiten")
         .select(
-          "id, gestartet_am, ausgefuehrte_uebungen (uebung_id, uebung_name, messart, ausgefuehrte_saetze (satztyp, erledigt, wdh, last_kg, dauer_sek, distanz_m, vorgabe))",
+          "id, gestartet_am, ausgefuehrte_uebungen (uebung_id, uebung_name, messart, ausgefuehrte_saetze (satztyp, erledigt, wdh, last_kg, dauer_sek, distanz_m, messwert, seite, vorgabe))",
         )
         .eq("athlet_id", athletId)
         .eq("status", "abgeschlossen")
         .order("gestartet_am", { ascending: true })
         .limit(500),
-      sb.from("uebungen").select("id, e1rm_geeignet").eq("e1rm_geeignet", true),
+      sb.from("uebungen").select("id, e1rm_geeignet, kleiner_besser").or("e1rm_geeignet.eq.true,kleiner_besser.eq.true"),
       sb.from("coach_einstellungen").select("e1rm_formel, e1rm_max_wdh").limit(1).maybeSingle(),
       sb
         .from("maxtests")
@@ -59,7 +60,9 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
         })),
       })),
     );
-    setGeeignet(new Set(((u.data as { id: string }[] | null) ?? []).map((x) => x.id)));
+    const ue = (u.data as { id: string; e1rm_geeignet: boolean; kleiner_besser: boolean }[] | null) ?? [];
+    setGeeignet(new Set(ue.filter((x) => x.e1rm_geeignet).map((x) => x.id)));
+    setKleiner(new Set(ue.filter((x) => x.kleiner_besser).map((x) => x.id)));
     const einst = k.data as { e1rm_formel: Formel; e1rm_max_wdh: number } | null;
     if (einst) {
       setFormel(einst.e1rm_formel);
@@ -74,8 +77,8 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
   }, [laden]);
 
   const verlauf = useMemo(
-    () => (einheiten ? auswerten(einheiten, (id) => geeignet.has(id), formel, maxWdh) : []),
-    [einheiten, geeignet, formel, maxWdh],
+    () => (einheiten ? auswerten(einheiten, (id) => geeignet.has(id), formel, maxWdh, (id) => kleiner.has(id)) : []),
+    [einheiten, geeignet, formel, maxWdh, kleiner],
   );
 
   if (fehler) return <p role="alert">Die Trainingsdaten konnten nicht geladen werden.</p>;
@@ -96,6 +99,46 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
   const mitZeit = ma === "zeit" || ma === "zeit_last";
   const mitStrecke = ma === "distanz" || ma === "distanz_last";
   const nurWdh = ma === "wdh";
+  const mitMesswert = ma === "umfang";
+  const kleinerBesser = kleiner.has(gewaehlt.uebungId);
+  const mitSeiten = p.some((x) => x.seiten);
+  /** Werte je Seite als zwei Linien (links blau, rechts orange) */
+  const seitenReihen = (feld: "bestZeit" | "meisteWdh" | "bestStrecke" | "messwert") => ({
+    links: p.filter((x) => x.seiten?.links?.[feld] != null).map((x) => ({ datum: x.datum, wert: x.seiten!.links![feld]! })),
+    rechts: p.filter((x) => x.seiten?.rechts?.[feld] != null).map((x) => ({ datum: x.datum, wert: x.seiten!.rechts![feld]! })),
+  });
+  /** Ein Diagramm – bei getrennten Seiten mit zwei Linien */
+  const verlaufKarte = (
+    titel: string,
+    einheit: string,
+    hinweis: string,
+    feld: "bestZeit" | "meisteWdh" | "bestStrecke" | "messwert",
+  ) => {
+    if (mitSeiten) {
+      const sr = seitenReihen(feld);
+      if (sr.links.length + sr.rechts.length === 0) return null;
+      return (
+        <Karte>
+          <Liniendiagramm
+            titel={titel}
+            einheit={einheit}
+            hinweis={hinweis}
+            punkte={sr.links}
+            linienName="links"
+            reihe2={{ name: "rechts", punkte: sr.rechts }}
+          />
+          <SeitenUnterschied links={sr.links} rechts={sr.rechts} einheit={einheit} kleinerBesser={feld === "messwert" && kleinerBesser} />
+        </Karte>
+      );
+    }
+    const punkteEinfach = p.filter((x) => x[feld] != null).map((x) => ({ datum: x.datum, wert: x[feld]! }));
+    if (punkteEinfach.length === 0) return null;
+    return (
+      <Karte>
+        <Liniendiagramm titel={titel} einheit={einheit} hinweis={hinweis} punkte={punkteEinfach} />
+      </Karte>
+    );
+  };
   const mitKg = ma === "wdh_last";
 
   return (
@@ -159,16 +202,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
         </Karte>
       )}
 
-      {mitZeit && p.some((x) => x.bestZeit != null) && (
-        <Karte>
-          <Liniendiagramm
-            titel="Längste Zeit"
-            einheit="s"
-            hinweis="Längster abgehakter Arbeitssatz pro Training (bei getrennten Seiten die bessere Seite)."
-            punkte={p.filter((x) => x.bestZeit != null).map((x) => ({ datum: x.datum, wert: x.bestZeit! }))}
-          />
-        </Karte>
-      )}
+      {mitZeit && verlaufKarte("Längste Zeit", "s", "Längster abgehakter Arbeitssatz pro Training.", "bestZeit")}
 
       {mitZeit && p.some((x) => x.summeZeit > 0) && (
         <Karte>
@@ -181,16 +215,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
         </Karte>
       )}
 
-      {mitStrecke && p.some((x) => x.bestStrecke != null) && (
-        <Karte>
-          <Liniendiagramm
-            titel="Längste Strecke"
-            einheit="m"
-            hinweis="Längster abgehakter Arbeitssatz pro Training."
-            punkte={p.filter((x) => x.bestStrecke != null).map((x) => ({ datum: x.datum, wert: x.bestStrecke! }))}
-          />
-        </Karte>
-      )}
+      {mitStrecke && verlaufKarte("Längste Strecke", "m", "Längster abgehakter Arbeitssatz pro Training.", "bestStrecke")}
 
       {mitStrecke && p.some((x) => x.summeStrecke > 0) && (
         <Karte>
@@ -203,16 +228,14 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
         </Karte>
       )}
 
-      {nurWdh && p.some((x) => x.meisteWdh != null) && (
-        <Karte>
-          <Liniendiagramm
-            titel="Meiste Wiederholungen"
-            einheit="Wdh."
-            hinweis="Bester abgehakter Arbeitssatz pro Training."
-            punkte={p.filter((x) => x.meisteWdh != null).map((x) => ({ datum: x.datum, wert: x.meisteWdh! }))}
-          />
-        </Karte>
-      )}
+      {nurWdh && verlaufKarte("Meiste Wiederholungen", "Wdh.", "Bester abgehakter Arbeitssatz pro Training.", "meisteWdh")}
+      {mitMesswert &&
+        verlaufKarte(
+          "Messwert",
+          "cm",
+          `Bester Wert pro Messung · ${kleinerBesser ? "kleiner ist besser" : "größer ist besser"}.`,
+          "messwert",
+        )}
 
       {p.some((x) => x.vorgabeGesamt > 0) && (
         <Karte titel="Vorgabe und Leistung">
@@ -373,5 +396,31 @@ function Maxtests({
         </button>
       )}
     </Karte>
+  );
+}
+
+/** Unterschied links/rechts beim letzten gemeinsamen Termin, ohne Bewertung als Diagnose. */
+function SeitenUnterschied({
+  links,
+  rechts,
+  einheit,
+  kleinerBesser,
+}: {
+  links: { datum: string; wert: number }[];
+  rechts: { datum: string; wert: number }[];
+  einheit: string;
+  kleinerBesser: boolean;
+}) {
+  const gemeinsam = links.filter((l) => rechts.some((r) => r.datum === l.datum));
+  const l = gemeinsam[gemeinsam.length - 1];
+  if (!l) return null;
+  const r = rechts.find((x) => x.datum === l.datum)!;
+  const diff = Math.round(Math.abs(l.wert - r.wert) * 10) / 10;
+  if (diff === 0) return <p className="mt-2 text-sm text-leise">Zuletzt beide Seiten gleich.</p>;
+  const besser = (kleinerBesser ? l.wert < r.wert : l.wert > r.wert) ? "links" : "rechts";
+  return (
+    <p className="mt-2 text-sm text-leise">
+      Zuletzt {zahl(diff)} {einheit} Unterschied, {besser} besser.
+    </p>
   );
 }

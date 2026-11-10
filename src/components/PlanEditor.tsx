@@ -1,5 +1,6 @@
 "use client";
 
+import { hatLast } from "@/lib/uebungen";
 import { useCallback, useEffect, useState } from "react";
 import { Karte } from "./Bausteine";
 import { UebungAuswahl } from "./UebungAuswahl";
@@ -214,7 +215,9 @@ function EinheitKarte({
                   ? { dauer_sek: 30 }
                   : uebung.messart === "distanz" || uebung.messart === "distanz_last"
                     ? { distanz_m: 20 }
-                    : { wdh_min: 8, wdh_max: 10 };
+                    : uebung.messart === "umfang"
+                      ? {}
+                      : { wdh_min: 8, wdh_max: 10 };
               return sb.from("plan_saetze").insert({ plan_uebung_id: neu.data.id, satznummer: 1, pause_sek: 90, ...vorgabe });
             });
           }}
@@ -250,7 +253,7 @@ function UebungBlock({
   const mitWdh = messart === "wdh_last" || messart === "wdh";
   const mitZeit = messart === "zeit" || messart === "zeit_last";
   const mitStrecke = messart === "distanz" || messart === "distanz_last";
-  const mitLast = messart !== "wdh" && messart !== "zeit" && messart !== "distanz";
+  const mitLast = hatLast(messart);
 
   return (
     <div className="rounded-xl border border-rand p-3">

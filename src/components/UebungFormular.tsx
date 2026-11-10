@@ -33,6 +33,7 @@ export function UebungFormular({
   const [messart, setMessart] = useState(vorlage?.messart ?? "wdh_last");
   const [einseitig, setEinseitig] = useState(vorlage?.einseitig ?? false);
   const [seitenGetrennt, setSeitenGetrennt] = useState(vorlage?.seiten_getrennt ?? false);
+  const [kleinerBesser, setKleinerBesser] = useState(vorlage?.kleiner_besser ?? false);
   const [e1rm, setE1rm] = useState(vorlage?.e1rm_geeignet ?? false);
   const [beschreibung, setBeschreibung] = useState(vorlage?.beschreibung ?? "");
   const [video, setVideo] = useState(vorlage?.video_link ?? "");
@@ -64,6 +65,7 @@ export function UebungFormular({
       ausstattung: geraete,
       einseitig,
       seiten_getrennt: einseitig && seitenGetrennt,
+      kleiner_besser: messart === "umfang" && kleinerBesser,
       messart,
       e1rm_geeignet: modul === "kraft" && e1rm,
       beschreibung: beschreibung.trim(),
@@ -150,6 +152,21 @@ export function UebungFormular({
           </select>
         </div>
       </div>
+
+      {messart === "umfang" && (
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={kleinerBesser}
+            onChange={(e) => setKleinerBesser(e.target.checked)}
+            className="mt-0.5 size-5 accent-akzent"
+          />
+          <span>
+            Kleiner ist besser
+            <span className="block text-xs text-leise">Zum Beispiel beim Finger-Boden-Abstand. Sonst gilt: größer ist besser.</span>
+          </span>
+        </label>
+      )}
 
       <Chips titel="Muskelgruppen" optionen={muskelText} gewaehlt={muskeln} umschalten={(w) => setMuskeln(umschalten(muskeln, w))} />
       <Chips titel="Ausstattung" optionen={geraetText} gewaehlt={geraete} umschalten={(w) => setGeraete(umschalten(geraete, w))} />
