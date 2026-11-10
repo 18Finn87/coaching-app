@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Karte } from "./Bausteine";
 import { PlanAnsicht } from "./PlanAnsicht";
 import { versionInhaltLaden } from "@/lib/plaene";
@@ -86,7 +86,21 @@ export function MeinPlan({ athletId }: { athletId: string }) {
     };
   }, [athletId]);
 
+  // Schutz gegen doppeltes Antippen: nur ein Start, bis die Trainingsseite offen ist
+  const startet = useRef(false);
   function starten(t: LokalesTraining) {
+    if (startet.current) return;
+    startet.current = true;
+    // Läuft für diesen Trainingstag schon ein Training auf dem Handy? Dann dieses fortsetzen.
+    const schon = t.einheit.plan_einheit_id
+      ? lokaleTrainings(athletId).find(
+          (x) => x.einheit.status === "laeuft" && x.einheit.plan_einheit_id === t.einheit.plan_einheit_id,
+        )
+      : undefined;
+    if (schon) {
+      router.push(`/training/?id=${schon.einheit.id}`);
+      return;
+    }
     lokalSpeichern(t);
     router.push(`/training/?id=${t.einheit.id}`);
   }

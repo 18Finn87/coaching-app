@@ -25,10 +25,11 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
   const [auswahl, setAuswahl] = useState<string>("");
   const [fehler, setFehler] = useState(false);
   const [puls, setPuls] = useState<Pulswerte>({ hf_max: null, hf_schwelle: null });
+  const [offen, setOffen] = useState(0);
 
   const laden = useCallback(async () => {
     const sb = supabase();
-    const [e, u, k, m, hf] = await Promise.all([
+    const [e, u, k, m, hf, lf] = await Promise.all([
       sb
         .from("trainingseinheiten")
         .select(
@@ -46,6 +47,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
         .eq("athlet_id", athletId)
         .order("datum"),
       sb.from("athlet_ausdauer").select("hf_max, hf_schwelle").eq("athlet_id", athletId).maybeSingle(),
+      sb.from("trainingseinheiten").select("id", { count: "exact", head: true }).eq("athlet_id", athletId).eq("status", "laeuft"),
     ]);
     if (e.error) {
       setFehler(true);
@@ -74,6 +76,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
     }
     setTests(((m.data as Maxtest[] | null) ?? []).map((t) => ({ ...t, last_kg: Number(t.last_kg) })));
     if (hf.data) setPuls(hf.data as Pulswerte);
+    setOffen(lf.count ?? 0);
   }, [athletId]);
 
   useEffect(() => {
@@ -105,11 +108,21 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
 
   if (fehler) return <p role="alert">Die Trainingsdaten konnten nicht geladen werden.</p>;
   if (einheiten === null) return <p className="text-leise">Lädt …</p>;
+  const offenHinweis =
+    offen > 0 ? (
+      <p className="rounded-xl border border-amber-400/60 bg-amber-400/10 p-3 text-sm">
+        {offen === 1 ? "1 Training ist" : `${offen} Trainings sind`} noch nicht abgeschlossen. Sie erscheinen hier erst nach
+        „Training abschließen“.
+      </p>
+    ) : null;
   if (verlauf.length === 0) {
     return (
-      <Karte>
-        <p className="text-leise">Noch keine abgeschlossenen Trainings – hier erscheint dann der Fortschritt.</p>
-      </Karte>
+      <>
+        {offenHinweis}
+        <Karte>
+          <p className="text-leise">Noch keine abgeschlossenen Trainings – hier erscheint dann der Fortschritt.</p>
+        </Karte>
+      </>
     );
   }
 
@@ -166,6 +179,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
 
   return (
     <div className="flex flex-col gap-4">
+      {offenHinweis}
       {ausdauerAbschnitte.length > 0 && <WochenUmfang abschnitte={ausdauerAbschnitte} zonen={zonen} />}
 
       <Karte>
