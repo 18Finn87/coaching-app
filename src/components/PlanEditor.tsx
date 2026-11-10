@@ -1,6 +1,7 @@
 "use client";
 
 import { hatLast } from "@/lib/uebungen";
+import { INTENSITAET_ART, paceLesen, paceText, type Intensitaet } from "@/lib/ausdauer";
 import { useCallback, useEffect, useState } from "react";
 import { Karte } from "./Bausteine";
 import { UebungAuswahl } from "./UebungAuswahl";
@@ -315,6 +316,7 @@ function UebungBlock({
             mitZeit={mitZeit}
             mitStrecke={mitStrecke}
             mitLast={mitLast}
+            ausdauer={messart === "ausdauer"}
             aendern={aendern}
           />
         ))}
@@ -360,6 +362,7 @@ function SatzZeile({
   mitZeit,
   mitStrecke,
   mitLast,
+  ausdauer = false,
   aendern,
 }: {
   satz: Satz;
@@ -367,9 +370,17 @@ function SatzZeile({
   mitZeit: boolean;
   mitStrecke: boolean;
   mitLast: boolean;
+  ausdauer?: boolean;
   aendern: Aendern;
 }) {
   const sb = supabase();
+  const intensitaet = satz.zusatz?.intensitaet ?? null;
+  function intensitaetSetzen(neu: Intensitaet | null) {
+    const zusatz = { ...(satz.zusatz ?? {}) };
+    if (neu) zusatz.intensitaet = neu;
+    else delete zusatz.intensitaet;
+    aendern(() => sb.from("plan_saetze").update({ zusatz }).eq("id", satz.id));
+  }
 
   function zahlFeld(spalte: keyof Satz, label: string, opt: { ganz?: boolean; min: number; max: number }) {
     const wert = satz[spalte] as number | null;
@@ -423,13 +434,133 @@ function SatzZeile({
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
         {mitWdh && zahlFeld("wdh_min", "Wdh. von", { ganz: true, min: 1, max: 100 })}
         {mitWdh && zahlFeld("wdh_max", "Wdh. bis", { ganz: true, min: 1, max: 100 })}
-        {mitZeit && zahlFeld("dauer_sek", "Dauer (s)", { ganz: true, min: 1, max: 86400 })}
-        {mitStrecke && zahlFeld("distanz_m", "Strecke (m)", { ganz: true, min: 1, max: 100000 })}
+        {ausdauer && (
+          <>
+            <Umgerechnet
+              label="Dauer (min)"
+              wert={satz.dauer_sek}
+              faktor={60}
+              max={1440}
+              setzen={(w) => aendern(() => sb.from("plan_saetze").update({ dauer_sek: w }).eq("id", satz.id))}
+            />
+            <Umgerechnet
+              label="Strecke (km)"
+              wert={satz.distanz_m}
+              faktor={1000}
+              max={100}
+              setzen={(w) => aendern(() => sb.from("plan_saetze").update({ distanz_m: w }).eq("id", satz.id))}
+            />
+          </>
+        )}
+        {!ausdauer && mitZeit && zahlFeld("dauer_sek", "Dauer (s)", { ganz: true, min: 1, max: 86400 })}
+        {!ausdauer && mitStrecke && zahlFeld("distanz_m", "Strecke (m)", { ganz: true, min: 1, max: 100000 })}
         {mitLast && zahlFeld("last_kg", "kg", { min: 0, max: 1000 })}
         {mitLast && zahlFeld("last_prozent", "% 1RM", { min: 1, max: 120 })}
-        {zahlFeld("rir_ziel", "RIR", { min: 0, max: 10 })}
+        {!ausdauer && zahlFeld("rir_ziel", "RIR", { min: 0, max: 10 })}
         {zahlFeld("pause_sek", "Pause (s)", { ganz: true, min: 0, max: 1800 })}
       </div>
+      {ausdauer && <IntensitaetFeld wert={intensitaet} setzen={intensitaetSetzen} />}
+    </div>
+  );
+}
+
+/** Zahl in einer anderen Einheit anzeigen, z. B. Minuten statt Sekunden, km statt m. */
+function Umgerechnet({
+  label,
+  wert,
+  faktor,
+  max,
+  setzen,
+}: {
+  label: string;
+  wert: number | null;
+  faktor: number;
+  max: number;
+  setzen: (w: number | null) => void;
+}) {
+  const anzeige = wert == null ? "" : String(Math.round((wert / faktor) * 100) / 100).replace(".", ",");
+  return (
+    <label className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-[11px] text-leise">{label}</span>
+      <input
+        key={`${label}-${wert}`}
+        inputMode="decimal"
+        defaultValue={anzeige}
+        onBlur={(ev) => {
+          const text = ev.target.value.trim().replace(",", ".");
+          const zahl = text === "" ? null : Number(text);
+          if (zahl !== null && (Number.isNaN(zahl) || zahl <= 0 || zahl > max)) {
+            ev.target.value = anzeige;
+            return;
+          }
+          const neu = zahl === null ? null : Math.round(zahl * faktor);
+          if (neu !== wert) setzen(neu);
+        }}
+        className={klein}
+      />
+    </label>
+  );
+}
+
+/** Intensitäts-Vorgabe für Ausdauer: Pulszone, Pace, km/h, Watt oder Anstrengung. */
+function IntensitaetFeld({ wert, setzen }: { wert: Intensitaet | null; setzen: (w: Intensitaet | null) => void }) {
+  const art = wert?.art ?? "";
+  const istPace = art === "pace";
+  const zeige = (n: number | null) => (n == null ? "" : istPace ? paceText(n).replace(" /km", "") : String(n).replace(".", ","));
+  const lese = (t: string): number | null | undefined => {
+    const x = t.trim();
+    if (x === "") return null;
+    if (istPace) return paceLesen(x) ?? undefined;
+    const n = Number(x.replace(",", "."));
+    if (Number.isNaN(n) || n < 0) return undefined;
+    if (art === "zone" && !(Number.isInteger(n) && n >= 1 && n <= 5)) return undefined;
+    if (art === "rpe" && !(Number.isInteger(n) && n >= 1 && n <= 10)) return undefined;
+    return n;
+  };
+  return (
+    <div className="mt-2 grid grid-cols-3 gap-2">
+      <label className="flex min-w-0 flex-col gap-0.5">
+        <span className="text-[11px] text-leise">Intensität</span>
+        <select
+          value={art}
+          onChange={(e) => {
+            const neu = e.target.value as Intensitaet["art"] | "";
+            setzen(neu ? { art: neu, von: null, bis: null } : null);
+          }}
+          className={klein}
+        >
+          <option value="">keine</option>
+          {Object.entries(INTENSITAET_ART).map(([w, t]) => (
+            <option key={w} value={w}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </label>
+      {wert &&
+        (["von", "bis"] as const).map((feld) => (
+          <label key={feld} className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-[11px] text-leise">
+              {feld}
+              {istPace ? " (m:ss)" : ""}
+            </span>
+            <input
+              key={`${art}-${feld}-${wert[feld]}`}
+              inputMode={istPace ? "text" : "decimal"}
+              defaultValue={zeige(wert[feld])}
+              placeholder={istPace ? "5:30" : art === "zone" ? "2" : ""}
+              onBlur={(ev) => {
+                const n = lese(ev.target.value);
+                if (n === undefined) {
+                  ev.target.value = zeige(wert[feld]);
+                  return;
+                }
+                if (n !== wert[feld]) setzen({ ...wert, [feld]: n });
+              }}
+              className={klein}
+            />
+          </label>
+        ))}
     </div>
   );
 }

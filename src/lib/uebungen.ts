@@ -72,7 +72,7 @@ export const modulText: Record<string, string> = {
 /** Standard-Messart beim Wechsel des Moduls */
 export const messartJeModul: Record<string, string> = {
   kraft: "wdh_last",
-  ausdauer: "distanz",
+  ausdauer: "ausdauer",
   intervall: "zeit",
   athletik: "zeit",
   mobilitaet: "zeit",
@@ -120,6 +120,7 @@ export const messartText: Record<string, string> = {
   distanz: "Strecke",
   distanz_last: "Strecke × Gewicht",
   umfang: "Messwert in cm (Messtest)",
+  ausdauer: "Zeit und Strecke (Ausdauer)",
 };
 
 /** Wird bei dieser Messart ein Gewicht eingetragen? */

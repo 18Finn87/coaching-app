@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Karte } from "./Bausteine";
 import { Liniendiagramm } from "./Liniendiagramm";
+import { WochenUmfang } from "./WochenUmfang";
+import { paceText, pulszonen, type AusdauerAbschnitt, type Pulswerte } from "@/lib/ausdauer";
 import { auswerten, type AEinheit } from "@/lib/auswertung";
 import { FORMELN, STANDARD_FORMEL, STANDARD_MAX_WDH, type Formel } from "@/lib/e1rm";
 import { supabase } from "@/lib/supabase";
@@ -22,14 +24,15 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
   const [tests, setTests] = useState<Maxtest[]>([]);
   const [auswahl, setAuswahl] = useState<string>("");
   const [fehler, setFehler] = useState(false);
+  const [puls, setPuls] = useState<Pulswerte>({ hf_max: null, hf_schwelle: null });
 
   const laden = useCallback(async () => {
     const sb = supabase();
-    const [e, u, k, m] = await Promise.all([
+    const [e, u, k, m, hf] = await Promise.all([
       sb
         .from("trainingseinheiten")
         .select(
-          "id, gestartet_am, ausgefuehrte_uebungen (uebung_id, uebung_name, messart, ausgefuehrte_saetze (satztyp, erledigt, wdh, last_kg, dauer_sek, distanz_m, messwert, seite, vorgabe))",
+          "id, gestartet_am, ausgefuehrte_uebungen (uebung_id, uebung_name, messart, ausgefuehrte_saetze (satztyp, erledigt, wdh, last_kg, dauer_sek, distanz_m, messwert, puls_schnitt, anstrengung, seite, vorgabe))",
         )
         .eq("athlet_id", athletId)
         .eq("status", "abgeschlossen")
@@ -42,6 +45,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
         .select("id, uebung_id, datum, last_kg, wdh, notiz, erfasst_von")
         .eq("athlet_id", athletId)
         .order("datum"),
+      sb.from("athlet_ausdauer").select("hf_max, hf_schwelle").eq("athlet_id", athletId).maybeSingle(),
     ]);
     if (e.error) {
       setFehler(true);
@@ -69,6 +73,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
       setMaxWdh(einst.e1rm_max_wdh);
     }
     setTests(((m.data as Maxtest[] | null) ?? []).map((t) => ({ ...t, last_kg: Number(t.last_kg) })));
+    if (hf.data) setPuls(hf.data as Pulswerte);
   }, [athletId]);
 
   useEffect(() => {
@@ -79,6 +84,23 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
   const verlauf = useMemo(
     () => (einheiten ? auswerten(einheiten, (id) => geeignet.has(id), formel, maxWdh, (id) => kleiner.has(id)) : []),
     [einheiten, geeignet, formel, maxWdh, kleiner],
+  );
+
+  const zonen = pulszonen(puls)?.zonen;
+  const ausdauerAbschnitte: AusdauerAbschnitt[] = (einheiten ?? []).flatMap((e) =>
+    e.uebungen
+      .filter((u) => u.messart === "ausdauer")
+      .flatMap((u) =>
+        u.saetze
+          .filter((s) => s.erledigt && s.satztyp !== "aufwaermen")
+          .map((s) => ({
+            datum: e.gestartet_am,
+            dauer_sek: s.dauer_sek ?? null,
+            distanz_m: s.distanz_m ?? null,
+            puls_schnitt: s.puls_schnitt ?? null,
+            anstrengung: s.anstrengung ?? null,
+          })),
+      ),
   );
 
   if (fehler) return <p role="alert">Die Trainingsdaten konnten nicht geladen werden.</p>;
@@ -96,6 +118,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
   const testsHier = tests.filter((t) => t.uebung_id === gewaehlt.uebungId);
   const letzter = p[p.length - 1];
   const ma = gewaehlt.messart;
+  const ausdauer = ma === "ausdauer";
   const mitZeit = ma === "zeit" || ma === "zeit_last";
   const mitStrecke = ma === "distanz" || ma === "distanz_last";
   const nurWdh = ma === "wdh";
@@ -143,6 +166,8 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
 
   return (
     <div className="flex flex-col gap-4">
+      {ausdauerAbschnitte.length > 0 && <WochenUmfang abschnitte={ausdauerAbschnitte} zonen={zonen} />}
+
       <Karte>
         <label htmlFor="fs-uebung" className="mb-1 block text-sm font-medium">
           Übung
@@ -198,6 +223,51 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
             einheit="kg"
             hinweis="Summe aus Wiederholungen × Gewicht aller abgehakten Arbeitssätze."
             punkte={p.filter((x) => x.volumen > 0).map((x) => ({ datum: x.datum, wert: x.volumen }))}
+          />
+        </Karte>
+      )}
+
+      {ausdauer && p.some((x) => x.paceSek != null) && (
+        <Karte>
+          <Liniendiagramm
+            titel="Pace"
+            einheit="/km"
+            format={(n) => paceText(n).replace(" /km", "")}
+            hinweis="Minuten pro km aus Zeit und Strecke – kleiner ist schneller."
+            punkte={p.filter((x) => x.paceSek != null).map((x) => ({ datum: x.datum, wert: x.paceSek! }))}
+          />
+        </Karte>
+      )}
+
+      {ausdauer && p.some((x) => x.summeStrecke > 0) && (
+        <Karte>
+          <Liniendiagramm
+            titel="Strecke"
+            einheit="km"
+            hinweis="Gesamtstrecke pro Einheit."
+            punkte={p.filter((x) => x.summeStrecke > 0).map((x) => ({ datum: x.datum, wert: Math.round(x.summeStrecke / 10) / 100 }))}
+          />
+        </Karte>
+      )}
+
+      {ausdauer && p.some((x) => x.summeZeit > 0) && (
+        <Karte>
+          <Liniendiagramm
+            titel="Dauer"
+            einheit="min"
+            hinweis="Gesamtdauer pro Einheit."
+            punkte={p.filter((x) => x.summeZeit > 0).map((x) => ({ datum: x.datum, wert: Math.round(x.summeZeit / 6) / 10 }))}
+          />
+        </Karte>
+      )}
+
+      {ausdauer && p.some((x) => x.pulsSchnitt != null) && (
+        <Karte>
+          <Liniendiagramm
+            titel="Ø-Puls"
+            einheit="/min"
+            hinweis="Mittel der eingetragenen Pulswerte pro Einheit (freiwillige Angabe)."
+            punkte={p.filter((x) => x.pulsSchnitt != null).map((x) => ({ datum: x.datum, wert: x.pulsSchnitt! }))}
           />
         </Karte>
       )}

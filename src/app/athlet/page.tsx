@@ -9,6 +9,7 @@ import { CheckinsFuerCoach, EvaluationenFuerCoach } from "@/components/CoachingK
 import type { Stufe } from "@/lib/evaluation";
 import { EinheitenListe } from "@/components/EinheitenListe";
 import { Fortschritt } from "@/components/Fortschritt";
+import { PulsEinstellung } from "@/components/PulsEinstellung";
 import { useProfil } from "@/lib/konto";
 import { stammdatenLaden, type Stammdaten } from "@/lib/stammdaten";
 import { supabase } from "@/lib/supabase";
@@ -147,6 +148,8 @@ function Inhalt() {
           </Karte>
 
           <FortschrittAufklappbar athletId={b.athlet_id} />
+
+          <PulsEinstellung athletId={b.athlet_id} />
 
           <AnamneseAnsicht athletId={b.athlet_id} einwilligung={hatGesundheit} />
         </>

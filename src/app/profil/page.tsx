@@ -11,6 +11,7 @@ import { RegelEinstellung } from "@/components/RegelEinstellung";
 import { KontoWechsel } from "@/components/KontoWechsel";
 import { abmelden } from "@/lib/kontowechsel";
 import { StammdatenFormular } from "@/components/StammdatenFormular";
+import { PulsEinstellung } from "@/components/PulsEinstellung";
 import { useKonto, useProfil } from "@/lib/konto";
 import { supabase } from "@/lib/supabase";
 
@@ -87,6 +88,7 @@ export default function ProfilSeite() {
         <>
           <MeineBetreuung athletId={profil.id} />
           <StammdatenFormular athletId={profil.id} />
+          <PulsEinstellung athletId={profil.id} />
           <Karte titel="Gesundheit">
             <Link href="/anamnese/" className="font-medium text-akzent underline underline-offset-4">
               Anamnese und Beschwerden öffnen

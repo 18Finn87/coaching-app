@@ -16,6 +16,8 @@ export type AEinheit = {
       dauer_sek?: number | null;
       distanz_m?: number | null;
       messwert?: number | null;
+      puls_schnitt?: number | null;
+      anstrengung?: number | null;
       seite?: string | null;
       vorgabe: {
         wdh_min?: number | null;
@@ -53,6 +55,10 @@ export type Punkt = {
   summeStrecke: number;
   /** Bester Messwert (bei „kleiner ist besser“ der kleinste) */
   messwert: number | null;
+  /** Pace (s/km) aus allen Abschnitten mit Zeit UND Strecke */
+  paceSek: number | null;
+  /** Ø-Puls (Mittel der eingetragenen Werte) */
+  pulsSchnitt: number | null;
   /** Bestwerte je Seite, wenn links und rechts getrennt eingetragen wurden */
   seiten: Record<"links" | "rechts", Seitenwerte | null> | null;
   /** Sätze mit Vorgabe, bei denen Wdh./Zeit/Strecke und Gewicht erreicht wurden */
@@ -102,8 +108,16 @@ export function auswerten(
       const kleiner = kleinerBesser(u.uebung_id);
       const besserMess = (a: number | null, b: number) => (a == null ? b : kleiner ? Math.min(a, b) : Math.max(a, b));
       let messwert: number | null = null;
+      let paceZeit = 0;
+      let paceStrecke = 0;
+      const pulse: number[] = [];
       const seiten: Record<"links" | "rechts", Seitenwerte | null> = { links: null, rechts: null };
       for (const s of zaehlend) {
+        if (s.dauer_sek && s.distanz_m) {
+          paceZeit += s.dauer_sek;
+          paceStrecke += s.distanz_m;
+        }
+        if (s.puls_schnitt != null) pulse.push(s.puls_schnitt);
         const mw = s.messwert == null ? null : Number(s.messwert);
         if (mw != null) messwert = besserMess(messwert, mw);
         if (s.seite === "links" || s.seite === "rechts") {
@@ -140,7 +154,8 @@ export function auswerten(
           mitVorgabe++;
           const wdhOk = zielWdh == null || (s.wdh != null && s.wdh >= zielWdh);
           const kgOk = zielKg == null || (kg != null && kg >= Number(zielKg));
-          const zeitOk = zielZeit == null || (s.dauer_sek != null && s.dauer_sek >= zielZeit);
+          // Bei Zeit UND Strecke (z. B. 5 km in 30 min) zählt die Strecke – länger brauchen ist kein Erfolg
+          const zeitOk = zielZeit == null || zielStrecke != null || (s.dauer_sek != null && s.dauer_sek >= zielZeit);
           const streckeOk = zielStrecke == null || (s.distanz_m != null && s.distanz_m >= zielStrecke);
           if (wdhOk && kgOk && zeitOk && streckeOk) erreicht++;
         }
@@ -168,6 +183,8 @@ export function auswerten(
         bestStrecke,
         summeStrecke,
         messwert,
+        paceSek: paceStrecke > 0 ? Math.round(paceZeit / (paceStrecke / 1000)) : null,
+        pulsSchnitt: pulse.length ? Math.round(pulse.reduce((x, y) => x + y, 0) / pulse.length) : null,
         seiten: seiten.links || seiten.rechts ? seiten : null,
         vorgabeErreicht: erreicht,
         vorgabeGesamt: mitVorgabe,

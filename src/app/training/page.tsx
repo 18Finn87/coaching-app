@@ -9,6 +9,8 @@ import { UebungAuswahl } from "@/components/UebungAuswahl";
 import { useProfil } from "@/lib/konto";
 import { zeitText } from "@/lib/plaene";
 import { hatLast } from "@/lib/uebungen";
+import { AusdauerFelder } from "@/components/AusdauerFelder";
+import { dauerText, intensitaetText, kmText } from "@/lib/ausdauer";
 import {
   hochladen,
   lokalLaden,
@@ -313,6 +315,13 @@ function leererSatz(nr: number, vorgabe: Vorgabe): TSatz {
 
 function vorgabeText(v: Vorgabe, messart: string): string {
   const teile: string[] = [];
+  if (messart === "ausdauer") {
+    if (v.dauer_sek) teile.push(`${dauerText(v.dauer_sek)} min`);
+    if (v.distanz_m) teile.push(kmText(v.distanz_m));
+    const i = intensitaetText(v.intensitaet);
+    if (i) teile.push(i);
+    return teile.join(" · ");
+  }
   if (v.wdh_min && v.wdh_max && v.wdh_min !== v.wdh_max) teile.push(`${v.wdh_min}–${v.wdh_max} Wdh.`);
   else if (v.wdh_min || v.wdh_max) teile.push(`${v.wdh_min ?? v.wdh_max} Wdh.`);
   if (v.dauer_sek) teile.push(zeitText(v.dauer_sek));
@@ -347,6 +356,7 @@ function UebungKarte({
   const mitStrecke = u.messart === "distanz" || u.messart === "distanz_last";
   const mitLast = hatLast(u.messart);
   const mitMesswert = u.messart === "umfang";
+  const ausdauer = u.messart === "ausdauer";
   const seiten = u.seiten_getrennt ?? u.saetze.some((s) => s.seite);
   const [uhr, setUhr] = useState<string | null>(null);
 
@@ -430,6 +440,16 @@ function UebungKarte({
                   </button>
                 )}
               </div>
+              {ausdauer ? (
+                <AusdauerFelder
+                  satz={s}
+                  aus={!bearbeitbar}
+                  setzen={(werte) => satzAendern(u.id, s.id, werte)}
+                  stoppuhr={bearbeitbar ? () => setUhr(s.id) : undefined}
+                  abhaken={() => satzErledigt(u, s)}
+                  bearbeitbar={bearbeitbar}
+                />
+              ) : (
               <div className="flex items-end gap-2">
                 {mitWdh && (
                   <Zahl
@@ -518,6 +538,7 @@ function UebungKarte({
                   ✓
                 </button>
               </div>
+              )}
             </div>
           );
         })}
@@ -581,7 +602,9 @@ function UebungKarte({
           }}
         />
       )}
-      {u.messart === "umfang" ? (
+      {ausdauer ? (
+        <p className="mt-2 text-[11px] text-leise">Pace rechnet die App aus Zeit und Strecke. Puls ist freiwillig. Anstrengung = deine Einschätzung (1–10).</p>
+      ) : u.messart === "umfang" ? (
         <p className="mt-2 text-[11px] text-leise">Messwert in cm. Minuswerte mit „-“ eingeben (z. B. -3).</p>
       ) : (
         <p className="mt-2 text-[11px] text-leise">* RIR = Wiederholungen in Reserve, deine Selbsteinschätzung</p>

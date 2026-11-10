@@ -12,7 +12,7 @@ export type EinwilligungArt = "nutzung" | "gesundheitsdaten";
  * Die alten Fassungen bleiben in der Versionsgeschichte des Repos nachvollziehbar.
  */
 export const TEXTVERSION: Record<EinwilligungArt, string> = {
-  nutzung: "2026-11-v1",
+  nutzung: "2026-11-v2",
   gesundheitsdaten: "2026-11-v1",
 };
 
@@ -35,6 +35,7 @@ export function einwilligungsText(art: EinwilligungArt, coach: string): {
             "Dein Name und deine E-Mail-Adresse.",
             "Deine Trainingspläne und was du im Training einträgst, zum Beispiel Wiederholungen, Gewichte und deine Einschätzungen.",
             "Deine wöchentlichen Check-ins, zum Beispiel Schlaf, Stress und Energie.",
+            "Puls- und Ausdauerwerte, zum Beispiel Ø-Puls oder Maximalpuls – nur wenn du sie einträgst (freiwillig).",
           ],
         },
         {

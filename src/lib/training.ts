@@ -2,6 +2,7 @@
 
 import { supabase } from "./supabase";
 import type { Einheit } from "./plaene";
+import type { Intensitaet } from "./ausdauer";
 
 // ---------------------------------------------------------------------
 // Datentypen eines Trainings (so, wie es auf dem Handy gespeichert wird)
@@ -17,6 +18,7 @@ export type Vorgabe = {
   pause_sek?: number | null;
   dauer_sek?: number | null;
   distanz_m?: number | null;
+  intensitaet?: Intensitaet | null;
 };
 
 export type TSatz = {
@@ -32,6 +34,8 @@ export type TSatz = {
   distanz_m: number | null;
   /** Messtests (z. B. cm) */
   messwert?: number | null;
+  puls_schnitt?: number | null;
+  anstrengung?: number | null;
   erledigt: boolean;
   /** Nur bei Übungen mit getrennten Seiten */
   seite?: "links" | "rechts" | null;
@@ -195,6 +199,7 @@ export function trainingAusPlan(athletId: string, versionId: string, e: Einheit)
             pause_sek: s.pause_sek,
             dauer_sek: s.dauer_sek,
             distanz_m: s.distanz_m,
+            intensitaet: s.zusatz?.intensitaet ?? null,
           },
           wdh: null,
           last_kg: s.last_kg,
@@ -264,7 +269,7 @@ export async function vomServerLaden(id: string): Promise<{ daten: LokalesTraini
     .select(
       `id, athlet_id, planversion_id, plan_einheit_id, titel, status, gestartet_am, beendet_am, session_rpe, notiz,
        ausgefuehrte_uebungen (id, uebung_id, plan_uebung_id, reihenfolge, uebung_name, messart, ersetzt, notiz,
-         ausgefuehrte_saetze (id, plan_satz_id, satznummer, satztyp, vorgabe, wdh, last_kg, rir, dauer_sek, distanz_m, messwert, erledigt, seite, zusatz))`,
+         ausgefuehrte_saetze (id, plan_satz_id, satznummer, satztyp, vorgabe, wdh, last_kg, rir, dauer_sek, distanz_m, messwert, puls_schnitt, anstrengung, erledigt, seite, zusatz))`,
     )
     .eq("id", id)
     .maybeSingle();
@@ -382,6 +387,8 @@ async function einmalHochladen(id: string): Promise<boolean> {
           dauer_sek: s.dauer_sek,
           distanz_m: s.distanz_m,
           messwert: s.messwert ?? null,
+          puls_schnitt: s.puls_schnitt ?? null,
+          anstrengung: s.anstrengung ?? null,
           erledigt: s.erledigt,
           seite: s.seite ?? null,
           zusatz: s.zusatz ?? {},

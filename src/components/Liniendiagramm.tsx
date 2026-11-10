@@ -44,6 +44,7 @@ export function Liniendiagramm({
   hinweis,
   linienName,
   markierungsName,
+  format,
 }: {
   titel: string;
   einheit: string;
@@ -53,7 +54,10 @@ export function Liniendiagramm({
   hinweis?: string;
   linienName?: string;
   markierungsName?: string;
+  /** eigene Zahlen-Darstellung, z. B. Pace als 5:30 */
+  format?: (n: number) => string;
 }) {
+  const f = format ?? zahl;
   const [aktiv, setAktiv] = useState<string | null>(null);
   const [tabelle, setTabelle] = useState(false);
   const tabellenId = useId();
@@ -92,10 +96,10 @@ export function Liniendiagramm({
           <span className="text-right text-sm text-leise">
             zuletzt{" "}
             {reihe2
-              ? [letzter1 && `${linienName ?? ""} ${zahl(letzter1.wert)}`, letzter2 && `${reihe2.name} ${zahl(letzter2.wert)}`]
+              ? [letzter1 && `${linienName ?? ""} ${f(letzter1.wert)}`, letzter2 && `${reihe2.name} ${f(letzter2.wert)}`]
                   .filter(Boolean)
                   .join(" · ")
-              : zahl(letzter1!.wert)}{" "}
+              : f(letzter1!.wert)}{" "}
             {einheit}
           </span>
         )}
@@ -136,14 +140,14 @@ export function Liniendiagramm({
           viewBox={`0 0 ${B} ${H}`}
           className="h-auto w-full touch-pan-y"
           role="img"
-          aria-label={`${titel}: ${daten.length} Werte von ${zahl(Math.min(...alle))} bis ${zahl(Math.max(...alle))} ${einheit}`}
+          aria-label={`${titel}: ${daten.length} Werte von ${f(Math.min(...alle))} bis ${f(Math.max(...alle))} ${einheit}`}
           onMouseLeave={() => setAktiv(null)}
         >
           {ticks.map((t) => (
             <g key={t}>
               <line x1={RAND.links} x2={B - RAND.rechts} y1={y(t)} y2={y(t)} stroke="var(--rand)" strokeWidth="1" />
               <text x={RAND.links - 6} y={y(t) + 4} textAnchor="end" fontSize="11" fill="var(--leise)">
-                {zahl(t)}
+                {f(t)}
               </text>
             </g>
           ))}
@@ -209,7 +213,7 @@ export function Liniendiagramm({
               stroke="var(--flaeche)"
               strokeWidth="2"
             >
-              <title>{`${m.text}: ${zahl(m.wert)} ${einheit} am ${datum(m.datum)}`}</title>
+              <title>{`${m.text}: ${f(m.wert)} ${einheit} am ${datum(m.datum)}`}</title>
             </rect>
           ))}
           {/* Große, unsichtbare Trefferflächen zum Antippen */}
@@ -244,7 +248,7 @@ export function Liniendiagramm({
               .map((z) => (
                 <span key={z.name ?? "w"} className="block font-semibold">
                   {z.name ? `${z.name}: ` : ""}
-                  {zahl(z.wert!)} {einheit}
+                  {f(z.wert!)} {einheit}
                 </span>
               ))}
           </div>
@@ -276,9 +280,9 @@ export function Liniendiagramm({
               return (
                 <tr key={d} className="border-t border-rand">
                   <td className="py-1">{datum(d)}</td>
-                  <td className="py-1 text-right tabular-nums">{w1 !== undefined ? `${zahl(w1)} ${einheit}` : "–"}</td>
+                  <td className="py-1 text-right tabular-nums">{w1 !== undefined ? `${f(w1)} ${einheit}` : "–"}</td>
                   {reihe2 && (
-                    <td className="py-1 text-right tabular-nums">{w2 !== undefined ? `${zahl(w2)} ${einheit}` : "–"}</td>
+                    <td className="py-1 text-right tabular-nums">{w2 !== undefined ? `${f(w2)} ${einheit}` : "–"}</td>
                   )}
                 </tr>
               );
@@ -287,7 +291,7 @@ export function Liniendiagramm({
               <tr key={"m" + i} className="border-t border-rand">
                 <td className="py-1">{datum(m.datum)}</td>
                 <td className="py-1 text-right tabular-nums" colSpan={reihe2 ? 2 : 1}>
-                  {zahl(m.wert)} {einheit} <span className="ml-1 text-xs text-leise">({m.text})</span>
+                  {f(m.wert)} {einheit} <span className="ml-1 text-xs text-leise">({m.text})</span>
                 </td>
               </tr>
             ))}

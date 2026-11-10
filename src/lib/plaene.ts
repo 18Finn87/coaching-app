@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { hatLast } from "./uebungen";
+import { dauerText, intensitaetText, kmText, type Intensitaet } from "./ausdauer";
 
 export type Plan = {
   id: string;
@@ -34,6 +35,7 @@ export type Satz = {
   pause_sek: number | null;
   dauer_sek: number | null;
   distanz_m: number | null;
+  zusatz?: { intensitaet?: Intensitaet } & Record<string, unknown>;
 };
 
 export type PlanUebung = {
@@ -69,7 +71,7 @@ export const satztypText: Record<string, string> = {
 };
 
 const SATZ_SPALTEN =
-  "id, satznummer, satztyp, wdh_min, wdh_max, last_kg, last_prozent, rir_ziel, tempo, pause_sek, dauer_sek, distanz_m";
+  "id, satznummer, satztyp, wdh_min, wdh_max, last_kg, last_prozent, rir_ziel, tempo, pause_sek, dauer_sek, distanz_m, zusatz";
 
 export async function versionInhaltLaden(versionId: string): Promise<{ daten: Einheit[]; fehler: boolean }> {
   const { data, error } = await supabase()
@@ -94,6 +96,14 @@ export async function versionInhaltLaden(versionId: string): Promise<{ daten: Ei
 /** Kurze Beschreibung eines Satzes, z. B. „6–8 Wdh. · 60 kg · RIR 2 · Pause 2:00“ */
 export function satzText(s: Satz, messart = "wdh_last"): string {
   const teile: string[] = [];
+  if (messart === "ausdauer") {
+    if (s.dauer_sek) teile.push(`${dauerText(s.dauer_sek)} min`);
+    if (s.distanz_m) teile.push(kmText(s.distanz_m));
+    const i = intensitaetText(s.zusatz?.intensitaet);
+    if (i) teile.push(i);
+    if (s.pause_sek) teile.push(`Pause ${zeitText(s.pause_sek)}`);
+    return teile.join(" · ") || "ohne Vorgabe";
+  }
   if (s.satztyp === "amrap") teile.push("so viele Wdh. wie möglich");
   else if (s.wdh_min && s.wdh_max && s.wdh_min !== s.wdh_max) teile.push(`${s.wdh_min}–${s.wdh_max} Wdh.`);
   else if (s.wdh_min || s.wdh_max) teile.push(`${s.wdh_min ?? s.wdh_max} Wdh.`);

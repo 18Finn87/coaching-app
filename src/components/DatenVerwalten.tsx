@@ -24,7 +24,7 @@ export function DatenVerwalten() {
     setLaeuft(true);
     setMeldung(null);
     const sb = supabase();
-    const [profil, betreuung, stamm, einw, anamnese, beschwerden, protokoll, checkins, cGesundheit, trainings, maxtests, hinweise] = await Promise.all([
+    const [profil, betreuung, stamm, einw, anamnese, beschwerden, protokoll, checkins, cGesundheit, trainings, maxtests, hinweise, ausdauer] = await Promise.all([
       sb.from("profile").select("rolle, anzeigename, erstellt_am").eq("id", id).maybeSingle(),
       sb
         .from("coach_athlet")
@@ -44,11 +44,12 @@ export function DatenVerwalten() {
         .order("gestartet_am"),
       sb.from("maxtests").select("*").eq("athlet_id", id).order("datum"),
       sb.from("benachrichtigungen").select("art, text_kurz, erstellt_am, gelesen_am").order("erstellt_am"),
+      sb.from("athlet_ausdauer").select("hf_max, hf_schwelle, aktualisiert_am").eq("athlet_id", id).maybeSingle(),
     ]);
     setLaeuft(false);
 
     const fehler =
-      [profil, betreuung, stamm, einw, checkins, cGesundheit, trainings, maxtests, hinweise].some((x) => x.error) ||
+      [profil, betreuung, stamm, einw, checkins, cGesundheit, trainings, maxtests, hinweise, ausdauer].some((x) => x.error) ||
       anamnese.fehler ||
       beschwerden.fehler ||
       protokoll.fehler;
@@ -67,6 +68,7 @@ export function DatenVerwalten() {
       einwilligungen: einw.data,
       trainings: trainings.data,
       maximaltests: maxtests.data,
+      pulswerte: ausdauer.data,
       checkins: checkins.data,
       hinweise: hinweise.data,
       gesundheit: {
