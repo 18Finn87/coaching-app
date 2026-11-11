@@ -7,6 +7,8 @@ import { WochenUmfang } from "./WochenUmfang";
 import { IntervallAuswertung } from "./IntervallAuswertung";
 import { TestAuswertung, TestUeberblick, type TestInfo } from "./TestAuswertung";
 import type { Wertung } from "@/lib/athletik";
+import { SchmerzDetail, SchmerzUeberblick } from "./SchmerzVerlauf";
+import { schmerzListeLaden, schmerzNachUebung, type SchmerzEintrag } from "@/lib/reha";
 import { paceText, pulszonen, type AusdauerAbschnitt, type Pulswerte } from "@/lib/ausdauer";
 import { auswerten, type AEinheit } from "@/lib/auswertung";
 import { FORMELN, STANDARD_FORMEL, STANDARD_MAX_WDH, type Formel } from "@/lib/e1rm";
@@ -23,6 +25,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
   const [geeignet, setGeeignet] = useState<Set<string>>(new Set());
   const [kleiner, setKleiner] = useState<Set<string>>(new Set());
   const [testInfos, setTestInfos] = useState<Map<string, TestInfo>>(new Map());
+  const [schmerz, setSchmerz] = useState<SchmerzEintrag[]>([]);
   const [formel, setFormel] = useState<Formel>(STANDARD_FORMEL);
   const [maxWdh, setMaxWdh] = useState(STANDARD_MAX_WDH);
   const [tests, setTests] = useState<Maxtest[]>([]);
@@ -33,7 +36,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
 
   const laden = useCallback(async () => {
     const sb = supabase();
-    const [e, u, k, m, hf, lf] = await Promise.all([
+    const [e, u, k, m, hf, lf, sz] = await Promise.all([
       sb
         .from("trainingseinheiten")
         .select(
@@ -55,6 +58,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
         .order("datum"),
       sb.from("athlet_ausdauer").select("hf_max, hf_schwelle").eq("athlet_id", athletId).maybeSingle(),
       sb.from("trainingseinheiten").select("id", { count: "exact", head: true }).eq("athlet_id", athletId).eq("status", "laeuft"),
+      schmerzListeLaden(athletId),
     ]);
     if (e.error) {
       setFehler(true);
@@ -92,6 +96,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
     setTests(((m.data as Maxtest[] | null) ?? []).map((t) => ({ ...t, last_kg: Number(t.last_kg) })));
     if (hf.data) setPuls(hf.data as Pulswerte);
     setOffen(lf.count ?? 0);
+    setSchmerz(sz.daten);
   }, [athletId]);
 
   useEffect(() => {
@@ -105,6 +110,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
   );
 
   const zonen = pulszonen(puls)?.zonen;
+  const schmerzUebungen = schmerzNachUebung(schmerz);
   const ausdauerAbschnitte: AusdauerAbschnitt[] = (einheiten ?? []).flatMap((e) =>
     e.uebungen
       .filter((u) => u.messart === "ausdauer" || u.messart === "intervall")
@@ -152,6 +158,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
   const nurWdh = ma === "wdh";
   const mitMesswert = ma === "umfang";
   const testInfo = ma === "test" ? testInfos.get(gewaehlt.uebungId) : undefined;
+  const schmerzHier = schmerzUebungen.find((x) => x.uebungId === gewaehlt.uebungId);
   const kleinerBesser = kleiner.has(gewaehlt.uebungId);
   const mitSeiten = p.some((x) => x.seiten);
   /** Werte je Seite als zwei Linien (links blau, rechts orange) */
@@ -198,6 +205,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
       {offenHinweis}
       {ausdauerAbschnitte.length > 0 && <WochenUmfang abschnitte={ausdauerAbschnitte} zonen={zonen} />}
       <TestUeberblick verlaeufe={verlauf} infos={testInfos} waehlen={setAuswahl} />
+      <SchmerzUeberblick uebungen={schmerzUebungen} waehlen={setAuswahl} />
 
       <Karte>
         <label htmlFor="fs-uebung" className="mb-1 block text-sm font-medium">
@@ -333,6 +341,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
 
       {nurWdh && verlaufKarte("Meiste Wiederholungen", "Wdh.", "Bester abgehakter Arbeitssatz pro Training.", "meisteWdh")}
       {testInfo && <TestAuswertung verlauf={gewaehlt} info={testInfo} />}
+      {schmerzHier && <SchmerzDetail uebung={schmerzHier} />}
       {mitMesswert &&
         verlaufKarte(
           "Messwert",

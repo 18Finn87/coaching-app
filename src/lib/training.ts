@@ -1,5 +1,6 @@
 "use client";
 
+import { schmerzAbfragen } from "./reha";
 import { supabase } from "./supabase";
 import type { Einheit } from "./plaene";
 import type { Intensitaet } from "./ausdauer";
@@ -58,6 +59,11 @@ export type TUebung = {
   seiten_getrennt?: boolean;
   /** Leistungstest: Einheit des Ergebnisses (nur Anzeige) */
   einheit?: string | null;
+  /** Reha: nach Schmerz fragen (Reha-Übung oder Grenze im Plan) */
+  schmerz_abfragen?: boolean;
+  schmerzgrenze?: number | null;
+  /** Schmerzangabe 0–10 (Gesundheitsdaten, wird getrennt gespeichert) */
+  schmerz?: { wert: number | null; notiz: string };
   saetze: TSatz[];
 };
 
@@ -187,6 +193,8 @@ export function trainingAusPlan(athletId: string, versionId: string, e: Einheit)
         einseitig: u.uebung?.einseitig ?? false,
         seiten_getrennt: u.uebung?.seiten_getrennt ?? false,
         einheit: u.uebung?.einheit ?? null,
+        schmerz_abfragen: schmerzAbfragen(u.uebung?.modul, u.schmerzgrenze),
+        schmerzgrenze: u.schmerzgrenze ?? null,
         saetze: seitenAufteilen(u.uebung?.seiten_getrennt ?? false, u.plan_saetze.map((s) => ({
           id: neueId(),
           plan_satz_id: s.id,
@@ -263,7 +271,7 @@ export function freiesTraining(athletId: string): LokalesTraining {
 // ---------------------------------------------------------------------
 
 type ServerZeile = Omit<TEinheit, "uebungen"> & {
-  ausgefuehrte_uebungen: (Omit<TUebung, "saetze"> & { ausgefuehrte_saetze: TSatz[]; uebung?: { einheit: string | null } | null })[];
+  ausgefuehrte_uebungen: (Omit<TUebung, "saetze"> & { ausgefuehrte_saetze: TSatz[]; uebung?: { einheit: string | null; modul?: string } | null; plan_uebung?: { schmerzgrenze: number | null } | null })[];
 };
 
 export async function vomServerLaden(id: string): Promise<{ daten: LokalesTraining | null; fehler: boolean }> {
@@ -272,7 +280,8 @@ export async function vomServerLaden(id: string): Promise<{ daten: LokalesTraini
     .select(
       `id, athlet_id, planversion_id, plan_einheit_id, titel, status, gestartet_am, beendet_am, session_rpe, notiz,
        ausgefuehrte_uebungen (id, uebung_id, plan_uebung_id, reihenfolge, uebung_name, messart, ersetzt, notiz,
-         uebung:uebungen (einheit),
+         uebung:uebungen (einheit, modul),
+         plan_uebung:plan_uebungen (schmerzgrenze),
          ausgefuehrte_saetze (id, plan_satz_id, satznummer, satztyp, vorgabe, wdh, last_kg, rir, dauer_sek, distanz_m, messwert, puls_schnitt, anstrengung, erledigt, seite, zusatz))`,
     )
     .eq("id", id)
@@ -281,6 +290,14 @@ export async function vomServerLaden(id: string): Promise<{ daten: LokalesTraini
   if (!data) return { daten: null, fehler: false };
   const z = data as unknown as ServerZeile;
   const { ausgefuehrte_uebungen, ...kopf } = z;
+  // Schmerzangaben liegen im geschützten Bereich – nur laden, wenn es Reha-Übungen gibt
+  const schmerz = new Map<string, { wert: number; notiz: string }>();
+  if (ausgefuehrte_uebungen.some((u) => schmerzAbfragen(u.uebung?.modul, u.plan_uebung?.schmerzgrenze))) {
+    const ids = new Set(ausgefuehrte_uebungen.map((u) => u.id));
+    const { data: liste } = await supabase().rpc("reha_schmerz_liste", { p_athlet: kopf.athlet_id });
+    for (const s of (liste as { ausgefuehrte_uebung_id: string; wert: number; notiz: string }[] | null) ?? [])
+      if (ids.has(s.ausgefuehrte_uebung_id)) schmerz.set(s.ausgefuehrte_uebung_id, { wert: s.wert, notiz: s.notiz });
+  }
   return {
     fehler: false,
     daten: {
@@ -288,9 +305,12 @@ export async function vomServerLaden(id: string): Promise<{ daten: LokalesTraini
         ...kopf,
         uebungen: [...ausgefuehrte_uebungen]
           .sort((a, b) => a.reihenfolge - b.reihenfolge)
-          .map(({ ausgefuehrte_saetze, uebung, ...u }) => ({
+          .map(({ ausgefuehrte_saetze, uebung, plan_uebung, ...u }) => ({
             ...u,
             einheit: uebung?.einheit ?? null,
+            schmerz_abfragen: schmerzAbfragen(uebung?.modul, plan_uebung?.schmerzgrenze),
+            schmerzgrenze: plan_uebung?.schmerzgrenze ?? null,
+            ...(schmerz.has(u.id) ? { schmerz: schmerz.get(u.id) } : {}),
             saetze: [...ausgefuehrte_saetze]
               .map((s) => ({
                 ...s,
@@ -402,6 +422,16 @@ async function einmalHochladen(id: string): Promise<boolean> {
       if (saetze.length) {
         const r3 = await sb.from("ausgefuehrte_saetze").upsert(saetze);
         if (r3.error) throw r3.error;
+      }
+      for (const u of e.uebungen) {
+        if (!u.schmerz) continue;
+        const rs =
+          u.schmerz.wert == null
+            ? await sb.rpc("reha_schmerz_loeschen", { p_uebung: u.id })
+            : await sb.rpc("reha_schmerz_speichern", { p_uebung: u.id, p_wert: u.schmerz.wert, p_notiz: u.schmerz.notiz });
+        // Ohne Einwilligung lehnt der Server ab – das Training selbst wird trotzdem gespeichert
+        if (rs.error && rs.error.code !== "42501") throw rs.error;
+        if (rs.error) console.warn("Schmerzangabe nicht gespeichert (keine Einwilligung)");
       }
     }
 

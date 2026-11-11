@@ -13,7 +13,7 @@ export type EinwilligungArt = "nutzung" | "gesundheitsdaten";
  */
 export const TEXTVERSION: Record<EinwilligungArt, string> = {
   nutzung: "2026-11-v2",
-  gesundheitsdaten: "2026-11-v1",
+  gesundheitsdaten: "2026-11-v2",
 };
 
 export type Abschnitt = { titel: string; punkte: string[] };
@@ -77,6 +77,7 @@ export function einwilligungsText(art: EinwilligungArt, coach: string): {
         titel: "Worum geht es?",
         punkte: [
           "Für ein sicheres Training kann dein Coach dich nach Gesundheitsangaben fragen, zum Beispiel nach Verletzungen, Beschwerden, Schmerzen oder Vorerkrankungen.",
+          "Bei Reha-Übungen kannst du nach dem Training angeben, wie stark die Übung geschmerzt hat (0–10).",
           "Solche Angaben sind nach der DSGVO besonders geschützt (Artikel 9).",
         ],
       },

@@ -46,6 +46,7 @@ export function PlanAnsicht({
                   {u.uebung?.einseitig && <span className="ml-1 text-xs text-leise">(pro Seite)</span>}
                 </p>
                 {u.hinweis && <p className="text-sm text-leise">{u.hinweis}</p>}
+                {u.schmerzgrenze != null && <p className="text-sm text-leise">Schmerz in Ordnung bis {u.schmerzgrenze} von 10</p>}
                 <ul className="mt-1 flex flex-col gap-0.5 text-sm">
                   {u.plan_saetze.map((s) => (
                     <li key={s.id}>

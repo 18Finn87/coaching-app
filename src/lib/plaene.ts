@@ -43,8 +43,10 @@ export type PlanUebung = {
   reihenfolge: number;
   gruppe: string | null;
   hinweis: string;
+  /** Schmerzgrenze 0–10 (Reha), null = keine */
+  schmerzgrenze?: number | null;
   uebung_id: string;
-  uebung: { name: string; messart: string; einseitig: boolean; seiten_getrennt?: boolean; einheit?: string | null } | null;
+  uebung: { name: string; messart: string; einseitig: boolean; seiten_getrennt?: boolean; einheit?: string | null; modul?: string } | null;
   plan_saetze: Satz[];
 };
 
@@ -78,8 +80,8 @@ export async function versionInhaltLaden(versionId: string): Promise<{ daten: Ei
     .from("plan_einheiten")
     .select(
       `id, name, reihenfolge, notiz,
-       plan_uebungen (id, reihenfolge, gruppe, hinweis, uebung_id,
-         uebung:uebungen (name, messart, einseitig, seiten_getrennt, einheit),
+       plan_uebungen (id, reihenfolge, gruppe, hinweis, schmerzgrenze, uebung_id,
+         uebung:uebungen (name, messart, einseitig, seiten_getrennt, einheit, modul),
          plan_saetze (${SATZ_SPALTEN}))`,
     )
     .eq("planversion_id", versionId)

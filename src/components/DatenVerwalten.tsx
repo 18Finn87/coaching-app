@@ -24,7 +24,7 @@ export function DatenVerwalten() {
     setLaeuft(true);
     setMeldung(null);
     const sb = supabase();
-    const [profil, betreuung, stamm, einw, anamnese, beschwerden, protokoll, checkins, cGesundheit, trainings, maxtests, hinweise, ausdauer] = await Promise.all([
+    const [profil, betreuung, stamm, einw, anamnese, beschwerden, protokoll, checkins, cGesundheit, reha, trainings, maxtests, hinweise, ausdauer] = await Promise.all([
       sb.from("profile").select("rolle, anzeigename, erstellt_am").eq("id", id).maybeSingle(),
       sb
         .from("coach_athlet")
@@ -37,6 +37,7 @@ export function DatenVerwalten() {
       gesundheitProtokoll(id),
       sb.from("checkins").select("*").eq("athlet_id", id).order("woche"),
       sb.rpc("checkin_gesundheit_liste", { p_athlet: id }),
+      sb.rpc("reha_schmerz_liste", { p_athlet: id }),
       sb
         .from("trainingseinheiten")
         .select("*, ausgefuehrte_uebungen (*, ausgefuehrte_saetze (*))")
@@ -49,7 +50,7 @@ export function DatenVerwalten() {
     setLaeuft(false);
 
     const fehler =
-      [profil, betreuung, stamm, einw, checkins, cGesundheit, trainings, maxtests, hinweise, ausdauer].some((x) => x.error) ||
+      [profil, betreuung, stamm, einw, checkins, cGesundheit, reha, trainings, maxtests, hinweise, ausdauer].some((x) => x.error) ||
       anamnese.fehler ||
       beschwerden.fehler ||
       protokoll.fehler;
@@ -75,6 +76,7 @@ export function DatenVerwalten() {
         anamnese: anamnese.daten,
         beschwerden: beschwerden.daten,
         checkins_gesundheitsteil: cGesundheit.data,
+        reha_schmerz: reha.data,
         aenderungsprotokoll: protokoll.daten,
       },
     };

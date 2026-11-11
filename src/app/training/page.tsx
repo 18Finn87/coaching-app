@@ -12,6 +12,8 @@ import { hatLast } from "@/lib/uebungen";
 import { AusdauerFelder } from "@/components/AusdauerFelder";
 import { IntervallRunde } from "@/components/IntervallRunde";
 import { einheitKurz } from "@/lib/athletik";
+import { SchmerzAngabe } from "@/components/SchmerzAngabe";
+import { useEinwilligungen } from "@/lib/einwilligungen";
 import { IntervallTimer } from "@/components/IntervallTimer";
 import { dauerText, intensitaetText, kmText } from "@/lib/ausdauer";
 import {
@@ -184,6 +186,7 @@ function Training({
           satzAendern={satzAendern}
           satzErledigt={satzErledigt}
           training={training}
+          eigenes={eigenes}
         />
       ))}
 
@@ -353,6 +356,7 @@ function UebungKarte({
   satzAendern,
   satzErledigt,
   training,
+  eigenes,
 }: {
   u: TUebung;
   bearbeitbar: boolean;
@@ -361,8 +365,10 @@ function UebungKarte({
   satzAendern: (uId: string, sId: string, werte: Partial<TSatz>) => void;
   satzErledigt: (u: TUebung, s: TSatz) => void;
   training: LokalesTraining;
+  eigenes: boolean;
 }) {
   const [tauschen, setTauschen] = useState(false);
+  const { aktiv } = useEinwilligungen();
   const mitWdh = u.messart === "wdh_last" || u.messart === "wdh";
   const mitZeit = u.messart === "zeit" || u.messart === "zeit_last";
   const mitStrecke = u.messart === "distanz" || u.messart === "distanz_last";
@@ -641,6 +647,21 @@ function UebungKarte({
               for (const s of ue.saetze) if (!s.erledigt) s.last_kg = null;
             });
           }}
+        />
+      )}
+      {(u.schmerz_abfragen || u.schmerz) && (eigenes || u.schmerz?.wert != null) && (
+        <SchmerzAngabe
+          wert={u.schmerz?.wert ?? null}
+          notiz={u.schmerz?.notiz ?? ""}
+          grenze={u.schmerzgrenze ?? null}
+          einwilligung={!eigenes || !!aktiv("gesundheitsdaten")}
+          aus={!bearbeitbar || !eigenes}
+          setzen={(wert, notiz) =>
+            aendern(training, (ein) => {
+              const ue = ein.uebungen.find((x) => x.id === u.id);
+              if (ue) ue.schmerz = { wert, notiz };
+            })
+          }
         />
       )}
       {intervall ? (

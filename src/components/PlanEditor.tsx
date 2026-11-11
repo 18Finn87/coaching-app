@@ -315,6 +315,30 @@ function UebungBlock({
           className="h-10 min-w-0 rounded-lg border border-rand bg-background px-2 text-sm outline-none focus:border-akzent"
         />
       </div>
+      <label className="mb-2 flex items-center gap-2 text-sm">
+        <span className="text-leise">Schmerzgrenze (0–10)</span>
+        <input
+          key={`sg-${pu.schmerzgrenze ?? ""}`}
+          aria-label="Schmerzgrenze 0 bis 10"
+          inputMode="numeric"
+          placeholder={pu.uebung?.modul === "reha" ? "keine" : "–"}
+          defaultValue={pu.schmerzgrenze ?? ""}
+          onBlur={(ev) => {
+            const t = ev.target.value.trim();
+            const n = t === "" ? null : Number(t);
+            if (n !== null && (!Number.isInteger(n) || n < 0 || n > 10)) {
+              ev.target.value = pu.schmerzgrenze?.toString() ?? "";
+              return;
+            }
+            if (n !== (pu.schmerzgrenze ?? null))
+              aendern(() => sb.from("plan_uebungen").update({ schmerzgrenze: n }).eq("id", pu.id));
+          }}
+          className="h-9 w-16 rounded-lg border border-rand bg-background px-2 text-center text-sm outline-none focus:border-akzent"
+        />
+        <span className="text-xs text-leise">
+          {pu.uebung?.modul === "reha" ? "Reha: Schmerz wird immer abgefragt" : "mit Grenze wird nach Schmerz gefragt"}
+        </span>
+      </label>
 
       <div className="flex flex-col gap-2">
         {pu.plan_saetze.map((s) => (
