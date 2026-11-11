@@ -45,6 +45,7 @@ export function Liniendiagramm({
   linienName,
   markierungsName,
   format,
+  bereich,
 }: {
   titel: string;
   einheit: string;
@@ -56,6 +57,8 @@ export function Liniendiagramm({
   markierungsName?: string;
   /** eigene Zahlen-Darstellung, z. B. Pace als 5:30 */
   format?: (n: number) => string;
+  /** feste Achse, z. B. [0, 10] bei einer Skala */
+  bereich?: [number, number];
 }) {
   const f = format ?? zahl;
   const [aktiv, setAktiv] = useState<string | null>(null);
@@ -73,7 +76,9 @@ export function Liniendiagramm({
     tMin -= 86400000;
     tMax += 86400000;
   }
-  const ticks = schoeneSchritte(Math.min(...alle), Math.max(...alle));
+  const ticks = bereich
+    ? schoeneSchritte(Math.min(bereich[0], ...alle), Math.max(bereich[1], ...alle))
+    : schoeneSchritte(Math.min(...alle), Math.max(...alle));
   const yMin = ticks[0];
   const yMax = ticks[ticks.length - 1];
   const x = (d: string) => RAND.links + ((Date.parse(d) - tMin) / (tMax - tMin)) * (B - RAND.links - RAND.rechts);

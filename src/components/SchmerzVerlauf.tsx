@@ -57,6 +57,7 @@ export function SchmerzDetail({ uebung }: { uebung: SchmerzUebung }) {
       <Liniendiagramm
         titel="Schmerz"
         einheit="/10"
+        bereich={[0, 10]}
         hinweis={`Angabe nach der Übung${grenze != null ? ` · Grenze ${grenze}` : ""}. Eigene Einschätzung, keine Diagnose.`}
         punkte={e.map((x) => ({ datum: x.datum, wert: x.wert }))}
         markierungen={ueber.map((x) => ({ datum: x.datum, wert: x.wert, text: "über der Grenze" }))}
