@@ -187,7 +187,7 @@ function Inhalt() {
             className="w-full accent-akzent"
           />
           <div className="flex items-center justify-between text-sm tabular-nums">
-            <span className="font-semibold">{zeitpunktText(zeit)}</span>
+            <span className="font-semibold">{zeitpunktText(zeit, 2)}</span>
             <span className="text-leise">{zeitpunktText(dauer)}</span>
           </div>
 

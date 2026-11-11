@@ -99,7 +99,7 @@ function Inhalt() {
               </Karte>
             )}
             <p className="truncate text-sm font-medium">{s ? s.a.titel || s.a.uebung?.name || "Video" : "–"}</p>
-            <p className="text-xs text-leise">{s ? datum(s.a.erstellt_am) : ""} · <span className="tabular-nums">{zeitpunktText(zeiten[i])}</span></p>
+            <p className="text-xs text-leise">{s ? datum(s.a.erstellt_am) : ""} · <span className="tabular-nums">{zeitpunktText(zeiten[i], 2)}</span></p>
             <div className="grid grid-cols-2 gap-1">
               <button type="button" onClick={() => schritt(i, -BILD)} className="h-10 rounded-lg border border-rand" aria-label={`Video ${i + 1}: ein Bild zurück`}>
                 ◀︎|

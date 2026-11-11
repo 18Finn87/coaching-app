@@ -197,14 +197,15 @@ export async function anmerkungLoeschen(id: string) {
 // ---------------------------------------------------------------------
 // Rechnen
 // ---------------------------------------------------------------------
-/** Zeit als 0:03,4 */
-export function zeitpunktText(sek: number): string {
+/** Zeit als 0:03,4 (oder mit 2 Stellen 0:03,47 – für das Bild-für-Bild-Springen) */
+export function zeitpunktText(sek: number, stellen: 1 | 2 = 1): string {
   const s = Math.max(0, sek);
   const m = Math.floor(s / 60);
   const rest = s - m * 60;
   const ganz = Math.floor(rest);
-  const zehntel = Math.floor((rest - ganz) * 10 + 1e-6);
-  return `${m}:${String(ganz).padStart(2, "0")},${zehntel}`;
+  const faktor = stellen === 2 ? 100 : 10;
+  const bruch = Math.floor((rest - ganz) * faktor + 1e-6);
+  return `${m}:${String(ganz).padStart(2, "0")},${String(bruch).padStart(stellen, "0")}`;
 }
 
 /** Winkel am mittleren Punkt (Grad, 0–180), Punkte relativ 0–1 und Bildseitenverhältnis */

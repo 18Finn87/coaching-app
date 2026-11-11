@@ -90,6 +90,7 @@ export function ZeichenFlaeche({
       onPointerDown={(e) => {
         if (!aktiv) return;
         const r = e.currentTarget.getBoundingClientRect();
+        if (!(r.width > 0 && r.height > 0)) return;
         const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
         const y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
         tippen([Math.round(x * 1000) / 1000, Math.round(y * 1000) / 1000]);

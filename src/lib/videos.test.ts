@@ -8,6 +8,8 @@ describe("Video-Analyse", () => {
     expect(zeitpunktText(0)).toBe("0:00,0");
     expect(zeitpunktText(29.99)).toBe("0:29,9");
     expect(zeitpunktText(61.25)).toBe("1:01,2");
+    expect(zeitpunktText(2.066665, 2)).toBe("0:02,06");
+    expect(zeitpunktText(3.05, 2)).toBe("0:03,05");
   });
 
   it("misst Winkel am mittleren Punkt", () => {
