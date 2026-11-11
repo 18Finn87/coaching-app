@@ -175,7 +175,7 @@ funktioniert unverändert (alle bisherigen Prüfskripte laufen weiter grün).
 | 8 | Messart `umfang` (cm/Grad) – sonst nichts Neues |
 | 9 | `athlet_ausdauer` (Max-/Schwellenpuls pro Person), Puls/Pace im Zusatzfeld |
 | 10 | Intervall-Block in `plan_uebungen.zusatz` (Runden, Belastung, Pause), Rundenwerte als einzelne Sätze |
-| 11 | `leistungstests` (Testdefinition), `testergebnisse` (Versuche, Datum, Person) |
+| 11 | Messart `test`, Spalten `uebungen.einheit` und `uebungen.wertung` – Versuche sind normale Sätze mit `messwert` (keine neue Tabelle) |
 | 12 | `gesundheit.reha_schmerz` (Schmerz pro ausgeführter Übung), Schmerzgrenze pro Plan-Übung |
 | 13 | Storage-Bucket `videos` (privat), `analysen`, `analyse_anmerkungen`, neue Einwilligungsart `videos` |
 

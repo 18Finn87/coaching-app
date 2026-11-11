@@ -11,6 +11,7 @@ import { zeitText } from "@/lib/plaene";
 import { hatLast } from "@/lib/uebungen";
 import { AusdauerFelder } from "@/components/AusdauerFelder";
 import { IntervallRunde } from "@/components/IntervallRunde";
+import { einheitKurz } from "@/lib/athletik";
 import { IntervallTimer } from "@/components/IntervallTimer";
 import { dauerText, intensitaetText, kmText } from "@/lib/ausdauer";
 import {
@@ -204,6 +205,7 @@ function Training({
                   notiz: "",
                   einseitig: neu.einseitig,
                   seiten_getrennt: neu.seiten_getrennt,
+                  einheit: neu.einheit,
                   saetze: seitenAufteilen(neu.seiten_getrennt, [leererSatz(1, {})]),
                 });
               });
@@ -365,7 +367,8 @@ function UebungKarte({
   const mitZeit = u.messart === "zeit" || u.messart === "zeit_last";
   const mitStrecke = u.messart === "distanz" || u.messart === "distanz_last";
   const mitLast = hatLast(u.messart);
-  const mitMesswert = u.messart === "umfang";
+  const test = u.messart === "test";
+  const mitMesswert = u.messart === "umfang" || test;
   const ausdauer = u.messart === "ausdauer";
   const intervall = u.messart === "intervall";
   const [timer, setTimer] = useState(false);
@@ -445,7 +448,7 @@ function UebungKarte({
             >
               <div className="mb-1 flex items-center justify-between gap-2 text-xs text-leise">
                 <span>
-                  {intervall ? "Runde" : "Satz"} {s.satznummer}
+                  {intervall ? "Runde" : test ? "Versuch" : "Satz"} {s.satznummer}
                   {s.seite && <strong className="font-semibold text-foreground"> · {s.seite === "links" ? "links" : "rechts"}</strong>}
                   {s.satztyp !== "arbeit" ? ` · ${s.satztyp === "aufwaermen" ? "Aufwärmen" : s.satztyp}` : ""}
                   {vt ? ` · Vorgabe: ${vt}` : ""}
@@ -544,7 +547,7 @@ function UebungKarte({
                 )}
                 {mitMesswert && (
                   <Zahl
-                    label="cm"
+                    label={test ? (u.einheit ? einheitKurz[u.einheit] ?? u.einheit : "Ergebnis") : "cm"}
                     wert={s.messwert ?? null}
                     platzhalter=""
                     min={-1000}
@@ -644,6 +647,8 @@ function UebungKarte({
         <p className="mt-2 text-[11px] text-leise">Der Timer trägt jede Runde selbst ein. Bei Strecken-Intervallen misst er die Zeit bis „Runde fertig“.</p>
       ) : ausdauer ? (
         <p className="mt-2 text-[11px] text-leise">Pace rechnet die App aus Zeit und Strecke. Puls ist freiwillig. Anstrengung = deine Einschätzung (1–10).</p>
+      ) : test ? (
+        <p className="mt-2 text-[11px] text-leise">Ein Satz = ein Versuch. Ergebnis eintragen und abhaken, Kommazahlen mit „,“ (z. B. 1,85).</p>
       ) : u.messart === "umfang" ? (
         <p className="mt-2 text-[11px] text-leise">Messwert in cm. Minuswerte mit „-“ eingeben (z. B. -3).</p>
       ) : (

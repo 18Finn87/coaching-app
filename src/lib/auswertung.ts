@@ -55,6 +55,8 @@ export type Punkt = {
   summeStrecke: number;
   /** Bester Messwert (bei „kleiner ist besser“ der kleinste) */
   messwert: number | null;
+  /** Alle Messwerte (z. B. Versuche eines Leistungstests) in Reihenfolge */
+  messwerte: number[];
   /** Pace (s/km) aus allen Abschnitten mit Zeit UND Strecke */
   paceSek: number | null;
   /** Ø-Puls (Mittel der eingetragenen Werte) */
@@ -110,6 +112,7 @@ export function auswerten(
       const kleiner = kleinerBesser(u.uebung_id);
       const besserMess = (a: number | null, b: number) => (a == null ? b : kleiner ? Math.min(a, b) : Math.max(a, b));
       let messwert: number | null = null;
+      const messwerte: number[] = [];
       let paceZeit = 0;
       let paceStrecke = 0;
       const pulse: number[] = [];
@@ -121,7 +124,10 @@ export function auswerten(
         }
         if (s.puls_schnitt != null) pulse.push(s.puls_schnitt);
         const mw = s.messwert == null ? null : Number(s.messwert);
-        if (mw != null) messwert = besserMess(messwert, mw);
+        if (mw != null) {
+          messwert = besserMess(messwert, mw);
+          messwerte.push(mw);
+        }
         if (s.seite === "links" || s.seite === "rechts") {
           const w = (seiten[s.seite] ??= { bestZeit: null, meisteWdh: null, bestStrecke: null, messwert: null });
           if (s.dauer_sek != null) w.bestZeit = Math.max(w.bestZeit ?? s.dauer_sek, s.dauer_sek);
@@ -185,6 +191,7 @@ export function auswerten(
         bestStrecke,
         summeStrecke,
         messwert,
+        messwerte,
         paceSek: paceStrecke > 0 ? Math.round(paceZeit / (paceStrecke / 1000)) : null,
         runden: zaehlend.map((s) => ({
           zeit: s.dauer_sek ?? null,

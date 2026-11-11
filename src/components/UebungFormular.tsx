@@ -13,6 +13,7 @@ import {
   uebungSpeichern,
   type Uebung,
 } from "@/lib/uebungen";
+import { einheitText } from "@/lib/athletik";
 
 const feld =
   "h-12 w-full rounded-xl border border-rand bg-background px-3 text-base outline-none focus:border-akzent";
@@ -34,6 +35,8 @@ export function UebungFormular({
   const [einseitig, setEinseitig] = useState(vorlage?.einseitig ?? false);
   const [seitenGetrennt, setSeitenGetrennt] = useState(vorlage?.seiten_getrennt ?? false);
   const [kleinerBesser, setKleinerBesser] = useState(vorlage?.kleiner_besser ?? false);
+  const [einheit, setEinheit] = useState(vorlage?.einheit ?? "s");
+  const [wertung, setWertung] = useState(vorlage?.wertung ?? "bester");
   const [e1rm, setE1rm] = useState(vorlage?.e1rm_geeignet ?? false);
   const [beschreibung, setBeschreibung] = useState(vorlage?.beschreibung ?? "");
   const [video, setVideo] = useState(vorlage?.video_link ?? "");
@@ -65,8 +68,10 @@ export function UebungFormular({
       ausstattung: geraete,
       einseitig,
       seiten_getrennt: einseitig && seitenGetrennt,
-      kleiner_besser: messart === "umfang" && kleinerBesser,
+      kleiner_besser: (messart === "umfang" || messart === "test") && kleinerBesser,
       messart,
+      einheit: messart === "test" ? einheit : null,
+      wertung: messart === "test" ? wertung : "bester",
       e1rm_geeignet: modul === "kraft" && e1rm,
       beschreibung: beschreibung.trim(),
       video_link: v || null,
@@ -166,6 +171,55 @@ export function UebungFormular({
             <span className="block text-xs text-leise">Zum Beispiel beim Finger-Boden-Abstand. Sonst gilt: größer ist besser.</span>
           </span>
         </label>
+      )}
+
+      {messart === "test" && (
+        <div className="flex flex-col gap-3 rounded-xl border border-rand p-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="u-einheit" className="text-sm font-medium">
+                Einheit des Ergebnisses
+              </label>
+              <select
+                id="u-einheit"
+                value={einheit}
+                onChange={(e) => {
+                  setEinheit(e.target.value);
+                  // Zeiten: meist ist kleiner besser
+                  if (!vorlage) setKleinerBesser(e.target.value === "s");
+                }}
+                className={feld}
+              >
+                {Object.entries(einheitText).map(([w, t]) => (
+                  <option key={w} value={w}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="u-wertung" className="text-sm font-medium">
+                Bei mehreren Versuchen zählt
+              </label>
+              <select id="u-wertung" value={wertung} onChange={(e) => setWertung(e.target.value)} className={feld}>
+                <option value="bester">der beste Versuch</option>
+                <option value="schnitt">der Durchschnitt</option>
+              </select>
+            </div>
+          </div>
+          <label className="flex items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              checked={kleinerBesser}
+              onChange={(e) => setKleinerBesser(e.target.checked)}
+              className="mt-0.5 size-5 accent-akzent"
+            />
+            <span>
+              Kleiner ist besser
+              <span className="block text-xs text-leise">Zum Beispiel bei Sprintzeiten. Sonst gilt: größer ist besser (Sprungweite, Wurf).</span>
+            </span>
+          </label>
+        </div>
       )}
 
       <Chips titel="Muskelgruppen" optionen={muskelText} gewaehlt={muskeln} umschalten={(w) => setMuskeln(umschalten(muskeln, w))} />

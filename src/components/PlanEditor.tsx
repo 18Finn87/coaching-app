@@ -213,6 +213,11 @@ function EinheitKarte({
                 .single();
               if (neu.error) return neu;
               if (uebung.messart === "intervall") return neu;
+              // Leistungstest: 3 Versuche mit 2 min Pause
+              if (uebung.messart === "test")
+                return sb.from("plan_saetze").insert(
+                  [1, 2, 3].map((n) => ({ plan_uebung_id: neu.data.id, satznummer: n, pause_sek: 120 })),
+                );
               // Mit einem ersten Satz beginnen
               const vorgabe =
                 uebung.messart === "zeit" || uebung.messart === "zeit_last"
@@ -322,6 +327,7 @@ function UebungBlock({
             mitLast={mitLast}
             ausdauer={messart === "ausdauer"}
             intervall={intervall}
+            test={messart === "test"}
             aendern={aendern}
           />
         ))}
@@ -387,6 +393,7 @@ function SatzZeile({
   mitLast,
   ausdauer = false,
   intervall = false,
+  test = false,
   aendern,
 }: {
   satz: Satz;
@@ -396,6 +403,7 @@ function SatzZeile({
   mitLast: boolean;
   ausdauer?: boolean;
   intervall?: boolean;
+  test?: boolean;
   aendern: Aendern;
 }) {
   const sb = supabase();
@@ -435,7 +443,7 @@ function SatzZeile({
     <div className="rounded-lg bg-background/60 p-2">
       <div className="mb-1.5 flex items-center gap-2">
         <span className="text-sm font-medium">
-          {intervall ? "Runde" : "Satz"} {satz.satznummer}
+          {intervall ? "Runde" : test ? "Versuch" : "Satz"} {satz.satznummer}
           {intervall && satz.zusatz?.serienende && <span className="ml-1 text-xs font-normal text-leise">· Serienende</span>}
         </span>
         <select
@@ -486,7 +494,7 @@ function SatzZeile({
         {intervall && zahlFeld("distanz_m", "Strecke (m)", { ganz: true, min: 1, max: 100000 })}
         {mitLast && zahlFeld("last_kg", "kg", { min: 0, max: 1000 })}
         {mitLast && zahlFeld("last_prozent", "% 1RM", { min: 1, max: 120 })}
-        {!ausdauer && !intervall && zahlFeld("rir_ziel", "RIR", { min: 0, max: 10 })}
+        {!ausdauer && !intervall && !test && zahlFeld("rir_ziel", "RIR", { min: 0, max: 10 })}
         {zahlFeld("pause_sek", "Pause (s)", { ganz: true, min: 0, max: 1800 })}
       </div>
       {(ausdauer || intervall) && <IntensitaetFeld wert={intensitaet} setzen={intensitaetSetzen} />}

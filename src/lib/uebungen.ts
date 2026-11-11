@@ -11,6 +11,9 @@ export type Uebung = {
   seiten_getrennt: boolean;
   kleiner_besser: boolean;
   messart: string;
+  /** Nur bei Leistungstests: Einheit und Wertung mehrerer Versuche */
+  einheit: string | null;
+  wertung: string;
   e1rm_geeignet: boolean;
   beschreibung: string;
   video_link: string | null;
@@ -20,7 +23,7 @@ export type Uebung = {
 export type UebungEingabe = Omit<Uebung, "id" | "archiviert">;
 
 const SPALTEN =
-  "id, name, modul, bewegungsmuster, muskelgruppen, ausstattung, einseitig, seiten_getrennt, kleiner_besser, messart, e1rm_geeignet, beschreibung, video_link, archiviert";
+  "id, name, modul, bewegungsmuster, muskelgruppen, ausstattung, einseitig, seiten_getrennt, kleiner_besser, messart, einheit, wertung, e1rm_geeignet, beschreibung, video_link, archiviert";
 
 export const musterText: Record<string, string> = {
   kniebeuge: "Kniebeuge",
@@ -55,7 +58,7 @@ export const musterJeModul: Record<string, string[]> = {
     "ziehen_horizontal", "ziehen_vertikal", "rumpf", "tragen", "isolation", "halten", "sonstiges"],
   ausdauer: ["laufen", "gehen", "radfahren", "rudern", "schwimmen", "ausdauer_sonstiges", "sonstiges"],
   intervall: ["laufen", "radfahren", "rudern", "schwimmen", "sprinten", "ausdauer_sonstiges", "sonstiges"],
-  athletik: ["sprinten", "springen", "werfen", "richtungswechsel", "sonstiges"],
+  athletik: ["sprinten", "springen", "werfen", "richtungswechsel", "laufen", "sonstiges"],
   mobilitaet: ["dehnen", "mobilisieren", "halten", "sonstiges"],
   reha: Object.keys(musterText),
 };
@@ -74,7 +77,7 @@ export const messartJeModul: Record<string, string> = {
   kraft: "wdh_last",
   ausdauer: "ausdauer",
   intervall: "zeit",
-  athletik: "zeit",
+  athletik: "test",
   mobilitaet: "zeit",
   reha: "wdh",
 };
@@ -121,6 +124,8 @@ export const messartText: Record<string, string> = {
   distanz_last: "Strecke × Gewicht",
   umfang: "Messwert in cm (Messtest)",
   ausdauer: "Zeit und Strecke (Ausdauer)",
+  intervall: "Intervalle (Runden)",
+  test: "Leistungstest (Versuche)",
 };
 
 /** Wird bei dieser Messart ein Gewicht eingetragen? */

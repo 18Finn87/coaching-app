@@ -44,7 +44,7 @@ export type PlanUebung = {
   gruppe: string | null;
   hinweis: string;
   uebung_id: string;
-  uebung: { name: string; messart: string; einseitig: boolean; seiten_getrennt?: boolean } | null;
+  uebung: { name: string; messart: string; einseitig: boolean; seiten_getrennt?: boolean; einheit?: string | null } | null;
   plan_saetze: Satz[];
 };
 
@@ -79,7 +79,7 @@ export async function versionInhaltLaden(versionId: string): Promise<{ daten: Ei
     .select(
       `id, name, reihenfolge, notiz,
        plan_uebungen (id, reihenfolge, gruppe, hinweis, uebung_id,
-         uebung:uebungen (name, messart, einseitig, seiten_getrennt),
+         uebung:uebungen (name, messart, einseitig, seiten_getrennt, einheit),
          plan_saetze (${SATZ_SPALTEN}))`,
     )
     .eq("planversion_id", versionId)
@@ -103,6 +103,11 @@ export function satzText(s: Satz, messart = "wdh_last"): string {
     if (i) teile.push(i);
     if (s.pause_sek) teile.push(`Pause ${zeitText(s.pause_sek)}`);
     return teile.join(" · ") || "ohne Vorgabe";
+  }
+  if (messart === "test") {
+    teile.push("Versuch");
+    if (s.pause_sek) teile.push(`Pause ${zeitText(s.pause_sek)}`);
+    return teile.join(" · ");
   }
   if (s.satztyp === "amrap") teile.push("so viele Wdh. wie möglich");
   else if (s.wdh_min && s.wdh_max && s.wdh_min !== s.wdh_max) teile.push(`${s.wdh_min}–${s.wdh_max} Wdh.`);
