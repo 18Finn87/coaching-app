@@ -10,11 +10,11 @@ Für einen schnellen Überblick: Lies **Schritt 7** (Vorgehen in einfachen Worte
 ## Schritt 1 – Gibt es im Projektordner schon Dateien?
 
 - Für die neue App gab es noch **keinen** Projektordner.
-- Neu angelegt: `C:\Users\finnm\Documents\Coaching App\` mit dem Unterordner `docs\` (nur dieses Dokument liegt darin).
+- Neu angelegt: Ordner „Coaching App“ in den Dokumenten mit dem Unterordner `docs\` (nur dieses Dokument liegt darin).
 - Geprüft und **nicht angefasst**:
-  - `C:\Users\finnm\Documents\Fuball Oedheim Frauen\app` (Fußball-App) – bleibt komplett getrennt.
-  - `C:\Users\finnm\Documents\Codex\…` – nur leere Ordner eines anderen Programms, hat nichts mit diesem Projekt zu tun.
-  - Word-Dateien wie `Training Lena.docx`, `Training Ingo.docx`, `Trainingsplan allgemein.xlsx` – das sind vermutlich deine bisherigen Pläne. Ich habe sie **nicht** geöffnet. Sie könnten später als Vorlage für die Übungsbibliothek dienen (siehe Frage 6).
+  - die bestehende Fußball-App – bleibt komplett getrennt.
+  - ein Ordner eines anderen Programms – nur leere Ordner, hat nichts mit diesem Projekt zu tun.
+  - Einige Word- und Excel-Dateien mit Trainingsplänen – das sind vermutlich deine bisherigen Pläne. Ich habe sie **nicht** geöffnet. Sie könnten später als Vorlage für die Übungsbibliothek dienen (siehe Frage 6).
 - Vorschlag: ein **eigenes, neues Supabase-Projekt** (z. B. „coaching-app“, Region Frankfurt `eu-central-1`) und ein **eigenes GitHub-Repo**. Keine gemeinsame Datenbank mit der Fußball-App.
 
 ---
@@ -300,7 +300,7 @@ Nach **jedem** Schritt: ich teste, zeige dir das Ergebnis, fasse kurz zusammen u
 
 ## Schritt 8 – Offene Fragen (nur das, was vor dem Start geklärt sein muss)
 
-1. **Projektordner:** Ist `C:\Users\finnm\Documents\Coaching App` als Ort und Name in Ordnung? (Das Repo würde z. B. `coaching-app` heißen.)
+1. **Projektordner:** Ist der Ordner „Coaching App“ in den Dokumenten als Ort und Name in Ordnung? (Das Repo würde z. B. `coaching-app` heißen.)
 2. **Hosting und Repo:** GitHub Pages mit **öffentlichem** Repo (wie bei der Fußball-App, Code sichtbar, aber keine Daten und keine Geheimnisse darin) – oder lieber ein **privates** Repo? Hinweis: GitHub Pages aus einem privaten Repo kostet bei GitHub Geld; dann wäre Vercel (kostenlos) die Alternative. Meine Empfehlung: öffentliches Repo + GitHub Pages.
 3. **Training ohne Internet:** Hast du oder deine Athleten im Studio manchmal kein Netz? Wenn ja, baue ich in Phase 4 einen Zwischenspeicher auf dem Handy ein, der später nachlädt. Das macht Phase 4 etwas größer.
 4. **Alter:** Sind alle Athletinnen und Athleten **mindestens 16 Jahre** alt? Bei Jüngeren müssten Eltern in die Gesundheitsdaten einwilligen. Das würde ich dann anders bauen.
@@ -311,7 +311,7 @@ Nach **jedem** Schritt: ich teste, zeige dir das Ergebnis, fasse kurz zusammen u
 - Evaluationsregeln vorbelegt: Anfänger 4 Wochen / 10 Einheiten (fest), Fortgeschrittene 6 Wochen / 16 Einheiten, Sehr Erfahrene 8 Wochen / 20 Einheiten (beide änderbar).
 - Standard-Formel für das e1RM: Epley, nur bis 10 Wiederholungen; Brzycki als Alternative wählbar.
 - Gewichte in kg, Oberfläche nur auf Deutsch.
-- Startbestand von ca. 40–60 gängigen Kraftübungen, den du ergänzen kannst. Falls du möchtest, schaue ich mir dafür deine Word-Pläne (`Training Lena.docx` usw.) an – nur mit deinem Okay.
+- Startbestand von ca. 40–60 gängigen Kraftübungen, den du ergänzen kannst. Falls du möchtest, schaue ich mir dafür deine bisherigen Word-Pläne an – nur mit deinem Okay.
 - Design: schlicht, gut lesbar am Handy, mit hellem und dunklem Modus. Wenn du Wunschfarben hast, sag Bescheid.
 
 ---
@@ -320,7 +320,7 @@ Nach **jedem** Schritt: ich teste, zeige dir das Ergebnis, fasse kurz zusammen u
 
 | Frage | Entscheidung | Folge für den Plan |
 |---|---|---|
-| 1. Projektordner | `C:\Users\finnm\Documents\Coaching App` bleibt | Repo-Name: `coaching-app` |
+| 1. Projektordner | Ordner „Coaching App“ bleibt | Repo-Name: `coaching-app` |
 | 2. Hosting | öffentliches Repo + GitHub Pages | keine Geheimnisse im Repo, alles im Supabase Vault |
 | 3. Internet im Studio | fehlt manchmal | Offline-Zwischenspeicher als Schritt 4.5; Satz-Einträge bekommen eine eindeutige Kennung vom Handy, damit nichts doppelt hochgeladen wird |
 | 4. Alter | alle mindestens 16 | Einwilligung geben die Personen selbst; keine Eltern-Einwilligung nötig |

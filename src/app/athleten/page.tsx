@@ -219,7 +219,7 @@ function Einladen({ beiErfolg }: { beiErfolg: () => void }) {
             autoComplete="off"
             onChange={(e) => setName(e.target.value)}
             className={feld}
-            placeholder="z. B. Lena"
+            placeholder="z. B. Vorname"
           />
         </div>
         <div className="flex flex-col gap-1">
