@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Karte, Seitentitel } from "@/components/Bausteine";
 import { MeinPlan } from "@/components/MeinPlan";
+import { OffeneNachrichten } from "@/components/NachrichtenFuerCoach";
+import { UeberDich } from "@/components/UeberDich";
 import {
   ausloeserText,
   evaluationenPruefen,
@@ -99,6 +101,8 @@ function Uebersicht() {
         </p>
       </Karte>
 
+      <OffeneNachrichten />
+
       <Karte titel="Check-ins ohne Antwort">
         {checkins.length === 0 ? (
           <p className="text-sm text-leise">Alles beantwortet.</p>
@@ -148,7 +152,7 @@ function Uebersicht() {
 }
 
 function Heute() {
-  const { aktiv } = useEinwilligungen();
+  const { aktiv, coachName } = useEinwilligungen();
   const profil = useProfil();
   const [checkinFehlt, setCheckinFehlt] = useState(false);
 
@@ -175,14 +179,9 @@ function Heute() {
         </Link>
       )}
       <MeinPlan athletId={profil.id} />
+      <UeberDich athletId={profil.id} coachName={coachName} />
       <Karte titel="Deine Angaben">
         <ul className="flex flex-col gap-3">
-          <li>
-            <Link href="/profil/" className="font-medium text-akzent underline underline-offset-4">
-              Angaben zum Training
-            </Link>
-            <p className="text-sm text-leise">Ziele, Trainingstage, Ausstattung – im Profil.</p>
-          </li>
           <li>
             <Link href="/anamnese/" className="font-medium text-akzent underline underline-offset-4">
               Gesundheit und Anamnese

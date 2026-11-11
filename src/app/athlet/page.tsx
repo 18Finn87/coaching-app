@@ -9,6 +9,7 @@ import { CheckinsFuerCoach, EvaluationenFuerCoach } from "@/components/CoachingK
 import type { Stufe } from "@/lib/evaluation";
 import { EinheitenListe } from "@/components/EinheitenListe";
 import { Fortschritt } from "@/components/Fortschritt";
+import { NachrichtenFuerCoach } from "@/components/NachrichtenFuerCoach";
 import { PulsEinstellung } from "@/components/PulsEinstellung";
 import { useProfil } from "@/lib/konto";
 import { stammdatenLaden, type Stammdaten } from "@/lib/stammdaten";
@@ -140,6 +141,10 @@ function Inhalt() {
           </Karte>
 
           <EvaluationenFuerCoach athletId={b.athlet_id} stufe={b.erfahrungsstufe as Stufe} />
+
+          <div id="nachrichten" className="scroll-mt-20">
+            <NachrichtenFuerCoach athletId={b.athlet_id} />
+          </div>
 
           <CheckinsFuerCoach athletId={b.athlet_id} />
 

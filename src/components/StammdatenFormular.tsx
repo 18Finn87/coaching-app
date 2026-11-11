@@ -16,7 +16,17 @@ function zahlOderNull(text: string): number | null {
 }
 
 /** Athletin / Athlet: trainingsrelevante Angaben über sich selbst. */
-export function StammdatenFormular({ athletId }: { athletId: string }) {
+export function StammdatenFormular({
+  athletId,
+  eingebettet = false,
+  gespeichert,
+}: {
+  athletId: string;
+  /** ohne eigene Karte, z. B. im Bereich „Über dich“ */
+  eingebettet?: boolean;
+  gespeichert?: () => void;
+}) {
+  const Rahmen = eingebettet ? EingebettetRahmen : Karte;
   const [geladen, setGeladen] = useState(false);
   const [ladeFehler, setLadeFehler] = useState(false);
   const [geburtsjahr, setGeburtsjahr] = useState("");
@@ -79,6 +89,7 @@ export function StammdatenFormular({ athletId }: { athletId: string }) {
       ausstattung,
     });
     setLaeuft(false);
+    if (ok) gespeichert?.();
     setMeldung(
       ok
         ? { ok: true, text: "Gespeichert. Dein Coach sieht jetzt deine Angaben." }
@@ -88,14 +99,14 @@ export function StammdatenFormular({ athletId }: { athletId: string }) {
 
   if (!geladen) {
     return (
-      <Karte titel="Über dich (Training)">
+      <Rahmen titel="Über dich (Training)">
         <p className="text-leise">Lädt …</p>
-      </Karte>
+      </Rahmen>
     );
   }
 
   return (
-    <Karte titel="Über dich (Training)">
+    <Rahmen titel="Über dich (Training)">
       {ladeFehler && (
         <p role="alert" className="mb-3 text-sm">
           Deine Angaben konnten nicht geladen werden.
@@ -215,7 +226,7 @@ export function StammdatenFormular({ athletId }: { athletId: string }) {
           </p>
         )}
       </form>
-    </Karte>
+    </Rahmen>
   );
 }
 
@@ -252,5 +263,14 @@ function Auswahl({
         ))}
       </div>
     </fieldset>
+  );
+}
+
+function EingebettetRahmen({ titel, children }: { titel?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col">
+      {titel && <h3 className="mb-3 font-semibold">{titel}</h3>}
+      {children}
+    </div>
   );
 }

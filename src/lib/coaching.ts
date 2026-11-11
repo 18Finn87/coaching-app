@@ -130,7 +130,7 @@ export async function checkinAntworten(checkinId: string, antwort: string) {
 
 export type Benachrichtigung = {
   id: string;
-  art: "checkin_neu" | "checkin_antwort" | "checkin_erinnerung" | "evaluation_faellig" | "zusammenfassung" | "reha_hinweis";
+  art: "checkin_neu" | "checkin_antwort" | "checkin_erinnerung" | "evaluation_faellig" | "zusammenfassung" | "reha_hinweis" | "nachricht_antwort";
   athlet_id: string | null;
   bezug_id: string | null;
   text_kurz: string;
@@ -168,6 +168,8 @@ export function hinweisZiel(b: Benachrichtigung, rolle: "coach" | "athlet"): str
       return b.bezug_id ? `/evaluation/?id=${b.bezug_id}` : "/";
     case "zusammenfassung":
       return "/";
+    case "nachricht_antwort":
+      return "/#ueber-dich";
     case "reha_hinweis":
       return b.athlet_id ? `/athlet/?id=${b.athlet_id}` : "/athleten/";
     case "checkin_antwort":

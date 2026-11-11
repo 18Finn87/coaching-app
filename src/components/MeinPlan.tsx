@@ -154,6 +154,7 @@ export function MeinPlan({ athletId }: { athletId: string }) {
           <PlanAnsicht
             versionId={p.versionId}
             vorgeladen={p.einheiten}
+            kacheln
             aktion={(e) => (
               <button
                 type="button"

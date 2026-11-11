@@ -8,13 +8,17 @@ export function PlanAnsicht({
   versionId,
   vorgeladen,
   aktion,
+  kacheln = false,
 }: {
   versionId: string;
   /** Bereits geladener Inhalt (z. B. aus dem Speicher auf dem Handy) */
   vorgeladen?: Einheit[];
   /** Zusätzlicher Knopf pro Trainingstag, z. B. „Training starten“ */
   aktion?: (e: Einheit) => React.ReactNode;
+  /** Trainingstage eingeklappt als Kacheln (Kundenansicht) */
+  kacheln?: boolean;
 }) {
+  const [offen, setOffen] = useState<string | null>(null);
   const [geladen, setGeladen] = useState<Einheit[] | null>(null);
   const [fehler, setFehler] = useState(false);
 
@@ -33,9 +37,33 @@ export function PlanAnsicht({
 
   return (
     <div className="flex flex-col gap-4">
-      {einheiten.map((e) => (
+      {einheiten.map((e) => {
+        const auf = !kacheln || offen === e.id;
+        return (
         <section key={e.id} className="rounded-2xl border border-rand bg-flaeche p-4">
-          <h3 className="mb-2 text-lg font-semibold">{e.name}</h3>
+          {kacheln ? (
+            <button
+              type="button"
+              aria-expanded={auf}
+              onClick={() => setOffen(auf ? null : e.id)}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
+              <span className="min-w-0">
+                <span className="block text-lg font-semibold">{e.name}</span>
+                <span className="block truncate text-sm text-leise">
+                  {e.plan_uebungen.length} {e.plan_uebungen.length === 1 ? "Übung" : "Übungen"}
+                  {!auf && e.plan_uebungen.length > 0 && ` · ${e.plan_uebungen.map((u) => u.uebung?.name).filter(Boolean).join(", ")}`}
+                </span>
+              </span>
+              <span aria-hidden className="shrink-0 text-xl text-leise">
+                {auf ? "▾" : "▸"}
+              </span>
+            </button>
+          ) : (
+            <h3 className="mb-2 text-lg font-semibold">{e.name}</h3>
+          )}
+          {auf && (
+          <div className={kacheln ? "mt-3 border-t border-rand pt-3" : ""}>
           {e.notiz && <p className="mb-2 whitespace-pre-wrap text-sm text-leise">{e.notiz}</p>}
           <ol className="flex flex-col gap-3">
             {e.plan_uebungen.map((u) => (
@@ -61,8 +89,11 @@ export function PlanAnsicht({
             ))}
           </ol>
           {aktion && <div className="mt-3">{aktion(e)}</div>}
+          </div>
+          )}
         </section>
-      ))}
+        );
+      })}
     </div>
   );
 }
