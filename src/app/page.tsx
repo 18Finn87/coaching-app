@@ -193,6 +193,16 @@ function Heute() {
                 : "Nur mit deiner Einwilligung zu Gesundheitsdaten (im Profil)."}
             </p>
           </li>
+          <li>
+            <Link href="/videos/" className="font-medium text-akzent underline underline-offset-4">
+              Technik-Videos
+            </Link>
+            <p className="text-sm text-leise">
+              {aktiv("videos")
+                ? "Videos einer Übung hochladen und mit deinem Coach besprechen."
+                : "Nur mit deiner Einwilligung zu Videos (im Profil)."}
+            </p>
+          </li>
         </ul>
       </Karte>
     </>

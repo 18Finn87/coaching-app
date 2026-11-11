@@ -7,6 +7,7 @@ import { anamneseListe, beschwerdenListe, gesundheitProtokoll } from "@/lib/anam
 import { useKonto } from "@/lib/konto";
 import { vergessen } from "@/lib/kontowechsel";
 import { supabase } from "@/lib/supabase";
+import { eigeneVideosLoeschen } from "@/lib/videos";
 
 /** Athletin / Athlet: alle eigenen Daten herunterladen oder das Konto löschen. */
 export function DatenVerwalten() {
@@ -24,7 +25,7 @@ export function DatenVerwalten() {
     setLaeuft(true);
     setMeldung(null);
     const sb = supabase();
-    const [profil, betreuung, stamm, einw, anamnese, beschwerden, protokoll, checkins, cGesundheit, reha, trainings, maxtests, hinweise, ausdauer] = await Promise.all([
+    const [profil, betreuung, stamm, einw, anamnese, beschwerden, protokoll, checkins, cGesundheit, reha, trainings, maxtests, hinweise, ausdauer, analysen] = await Promise.all([
       sb.from("profile").select("rolle, anzeigename, erstellt_am").eq("id", id).maybeSingle(),
       sb
         .from("coach_athlet")
@@ -46,11 +47,12 @@ export function DatenVerwalten() {
       sb.from("maxtests").select("*").eq("athlet_id", id).order("datum"),
       sb.from("benachrichtigungen").select("art, text_kurz, erstellt_am, gelesen_am").order("erstellt_am"),
       sb.from("athlet_ausdauer").select("hf_max, hf_schwelle, aktualisiert_am").eq("athlet_id", id).maybeSingle(),
+      sb.from("analysen").select("id, titel, uebung_id, mime, groesse_bytes, dauer_sek, erstellt_am, loeschen_am, video_geloescht_am, hochgeladen_von, analyse_anmerkungen (zeit_sek, text, zeichnung, autor_id, erstellt_am)").eq("athlet_id", id).order("erstellt_am"),
     ]);
     setLaeuft(false);
 
     const fehler =
-      [profil, betreuung, stamm, einw, checkins, cGesundheit, reha, trainings, maxtests, hinweise, ausdauer].some((x) => x.error) ||
+      [profil, betreuung, stamm, einw, checkins, cGesundheit, reha, trainings, maxtests, hinweise, ausdauer, analysen].some((x) => x.error) ||
       anamnese.fehler ||
       beschwerden.fehler ||
       protokoll.fehler;
@@ -70,6 +72,10 @@ export function DatenVerwalten() {
       trainings: trainings.data,
       maximaltests: maxtests.data,
       pulswerte: ausdauer.data,
+      videoanalysen: {
+        hinweis: "Die Videos selbst sind nicht in dieser Datei. Du kannst sie in der App ansehen, solange sie gespeichert sind.",
+        analysen: analysen.data,
+      },
       checkins: checkins.data,
       hinweise: hinweise.data,
       gesundheit: {
@@ -94,6 +100,8 @@ export function DatenVerwalten() {
   async function kontoLoeschen() {
     setLaeuft(true);
     setMeldung(null);
+    // Videodateien zuerst entfernen (der Speicher löscht nur über seine eigene Schnittstelle)
+    await eigeneVideosLoeschen(id);
     const { error } = await supabase().functions.invoke("konto-loeschen", {
       body: { bestaetigung: "LÖSCHEN" },
     });

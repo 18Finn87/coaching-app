@@ -5,6 +5,7 @@ import { Karte } from "./Bausteine";
 import { EinwilligungsText } from "./Einwilligungsabfrage";
 import { einwilligungsText, useEinwilligungen, type EinwilligungArt } from "@/lib/einwilligungen";
 import { datum } from "@/lib/texte";
+import { videosAufraeumen } from "@/lib/videos";
 
 /** Profil-Bereich für Athletinnen und Athleten: Einwilligungen ansehen, erteilen, widerrufen. */
 export function EinwilligungenVerwalten() {
@@ -13,6 +14,7 @@ export function EinwilligungenVerwalten() {
       <div className="flex flex-col divide-y divide-rand">
         <Eintrag art="nutzung" />
         <Eintrag art="gesundheitsdaten" />
+        <Eintrag art="videos" />
       </div>
     </Karte>
   );
@@ -69,7 +71,7 @@ function Eintrag({ art }: { art: EinwilligungArt }) {
         </div>
       )}
 
-      {!e && art === "gesundheitsdaten" && (
+      {!e && art !== "nutzung" && (
         <button
           type="button"
           disabled={laeuft}
@@ -94,13 +96,21 @@ function Eintrag({ art }: { art: EinwilligungArt }) {
           <p className="text-sm">
             {art === "nutzung"
               ? "Wenn du die Nutzung widerrufst, kannst du die App nicht mehr verwenden, bis du erneut einwilligst. Deine gespeicherten Daten bleiben erhalten, bis du die Löschung beantragst."
-              : "Nach dem Widerruf sieht dein Coach deine Gesundheitsangaben nicht mehr und es können keine neuen eingetragen werden."}
+              : art === "videos"
+                ? "Nach dem Widerruf werden alle Videos von dir gelöscht – auch die, die dein Coach hochgeladen hat. Die schriftlichen Anmerkungen bleiben."
+                : "Nach dem Widerruf sieht dein Coach deine Gesundheitsangaben nicht mehr und es können keine neuen eingetragen werden."}
           </p>
           <div className="flex gap-2">
             <button
               type="button"
               disabled={laeuft}
-              onClick={() => ausfuehren(() => widerrufen(e.id))}
+              onClick={() =>
+                ausfuehren(async () => {
+                  const ok = await widerrufen(e.id);
+                  if (ok && art === "videos") await videosAufraeumen(true);
+                  return ok;
+                })
+              }
               className="h-11 rounded-xl bg-red-600 px-4 font-medium text-white disabled:opacity-50"
             >
               {laeuft ? "…" : "Ja, widerrufen"}

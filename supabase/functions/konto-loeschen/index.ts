@@ -72,6 +72,17 @@ Deno.serve(async (req) => {
     if (nutzer.user.email) {
       await admin.from("einladungen").delete().eq("email", nutzer.user.email.toLowerCase());
     }
+    // Videodateien entfernen – der Speicher löscht Dateien nur über seine eigene
+    // Schnittstelle, nicht über die Datenbank-Verknüpfungen
+    const { data: dateien } = await admin.storage.from("videos").list(id, { limit: 1000 });
+    if (dateien && dateien.length > 0) {
+      const { error: speicherFehler } = await admin.storage.from("videos").remove(dateien.map((d) => `${id}/${d.name}`));
+      if (speicherFehler) {
+        console.error("Videos löschen fehlgeschlagen:", speicherFehler.message);
+        return antwort(req, 500, { fehler: "loeschen_fehlgeschlagen" });
+      }
+    }
+
     const { error: loeschFehler } = await admin.auth.admin.deleteUser(id);
     if (loeschFehler) {
       console.error("Löschen fehlgeschlagen:", loeschFehler.message);

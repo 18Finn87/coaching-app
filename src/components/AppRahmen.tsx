@@ -1,6 +1,8 @@
 "use client";
 
 import { EinwilligungsAnbieter } from "@/lib/einwilligungen";
+import { videosAufraeumen } from "@/lib/videos";
+import { useEffect } from "react";
 import { KontoAnbieter, useKonto } from "@/lib/konto";
 import { supabase } from "@/lib/supabase";
 import { Anmeldung } from "./Anmeldung";
@@ -93,6 +95,7 @@ function Inhalt({ children }: { children: React.ReactNode }) {
             {children}
           </main>
           <Navigation rolle={zustand.profil.rolle} />
+          <VideosAufraeumen />
         </div>
       );
       return (
@@ -128,4 +131,13 @@ function Einfach({
       {children}
     </main>
   );
+}
+
+/** Abgelaufene Videos (12 Monate) und Videos nach Widerruf entfernen – höchstens einmal am Tag */
+function VideosAufraeumen() {
+  useEffect(() => {
+    const t = setTimeout(() => videosAufraeumen(), 4000);
+    return () => clearTimeout(t);
+  }, []);
+  return null;
 }

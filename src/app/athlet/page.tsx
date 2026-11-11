@@ -149,6 +149,17 @@ function Inhalt() {
 
           <FortschrittAufklappbar athletId={b.athlet_id} />
 
+          <Karte titel="Videos">
+            <Link href={`/videos/?athlet=${b.athlet_id}`} className="font-medium text-akzent underline underline-offset-4">
+              Technik-Videos ansehen und hochladen
+            </Link>
+            <p className="text-sm text-leise">
+              {einw.some((x) => x.art === "videos")
+                ? "Zeitlupe, Anmerkungen, Linien und Winkel, Vergleich vorher/nachher."
+                : "Hochladen geht erst mit der Einwilligung „Videos“ der Person."}
+            </p>
+          </Karte>
+
           <PulsEinstellung athletId={b.athlet_id} />
 
           <AnamneseAnsicht athletId={b.athlet_id} einwilligung={hatGesundheit} />

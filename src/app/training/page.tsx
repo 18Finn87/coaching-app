@@ -649,6 +649,14 @@ function UebungKarte({
           }}
         />
       )}
+      {eigenes && bearbeitbar && aktiv("videos") && (
+        <Link
+          href={`/videos/?uebung=${u.uebung_id}`}
+          className="mt-2 inline-block text-sm text-akzent underline underline-offset-4"
+        >
+          🎥 Video zu dieser Übung
+        </Link>
+      )}
       {(u.schmerz_abfragen || u.schmerz) && (eigenes || u.schmerz?.wert != null) && (
         <SchmerzAngabe
           wert={u.schmerz?.wert ?? null}

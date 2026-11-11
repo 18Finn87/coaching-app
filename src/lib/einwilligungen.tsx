@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { supabase } from "./supabase";
 import { useKonto } from "./konto";
 
-export type EinwilligungArt = "nutzung" | "gesundheitsdaten";
+export type EinwilligungArt = "nutzung" | "gesundheitsdaten" | "videos";
 
 /**
  * Aktuelle Fassung der Texte. Bei inhaltlichen Änderungen die Version erhöhen –
@@ -14,6 +14,7 @@ export type EinwilligungArt = "nutzung" | "gesundheitsdaten";
 export const TEXTVERSION: Record<EinwilligungArt, string> = {
   nutzung: "2026-11-v2",
   gesundheitsdaten: "2026-11-v2",
+  videos: "2026-11-v1",
 };
 
 export type Abschnitt = { titel: string; punkte: string[] };
@@ -67,6 +68,44 @@ export function einwilligungsText(art: EinwilligungArt, coach: string): {
         },
       ],
       bestaetigung: "Ich habe das gelesen und willige in die Nutzung der App ein.",
+    };
+  }
+  if (art === "videos") {
+    return {
+      titel: "Videos",
+      pflicht: false,
+      abschnitte: [
+        {
+          titel: "Worum geht es?",
+          punkte: [
+            "Du oder dein Coach könnt kurze Videos von dir bei einer Übung hochladen (höchstens 30 Sekunden, ohne Ton), um die Technik zu besprechen.",
+            "Auf den Videos bist du erkennbar. Deshalb gibt es dafür eine eigene Einwilligung.",
+          ],
+        },
+        {
+          titel: "Wer sieht sie?",
+          punkte: [`Nur du und dein Coach ${coach}. Die Videos liegen in einem privaten Speicher bei Supabase in Frankfurt (EU).`],
+        },
+        {
+          titel: "Wie lange?",
+          punkte: [
+            "Videos werden nach 12 Monaten automatisch gelöscht. Die schriftlichen Anmerkungen bleiben.",
+            "Du kannst jedes Video von dir jederzeit selbst löschen.",
+          ],
+        },
+        {
+          titel: "Keine Automatik",
+          punkte: ["Die App erkennt und bewertet nichts automatisch. Linien und Winkel werden von Hand eingezeichnet."],
+        },
+        {
+          titel: "Freiwillig",
+          punkte: [
+            "Du kannst ohne diese Einwilligung ganz normal trainieren.",
+            "Widerrufst du sie, werden deine Videos gelöscht. Die Anmerkungen bleiben.",
+          ],
+        },
+      ],
+      bestaetigung: "Ich willige ein, dass Videos von mir wie beschrieben gespeichert werden.",
     };
   }
   return {
