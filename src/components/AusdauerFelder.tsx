@@ -1,6 +1,7 @@
 "use client";
 
-import { kmh, pace, paceText } from "@/lib/ausdauer";
+import { UhrImport } from "./UhrImport";
+import { dauerText, kmh, pace, paceText } from "@/lib/ausdauer";
 import type { TSatz } from "@/lib/training";
 
 const feld =
@@ -60,6 +61,7 @@ export function AusdauerFelder({
   }
 
   const v0 = satz.vorgabe;
+  const z = (satz.zusatz ?? {}) as { hoehenmeter?: number | null; splits?: number[]; quelle?: string };
   return (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-4 gap-2">
@@ -72,6 +74,17 @@ export function AusdauerFelder({
         {zahl("Puls Ø", satz.puls_schnitt, 1, { min: 30, max: 250, ganz: true }, "", (w) => setzen({ puls_schnitt: w }))}
         {zahl("Anstr.", satz.anstrengung, 1, { min: 1, max: 10, ganz: true }, "1–10", (w) => setzen({ anstrengung: w }))}
       </div>
+      {(z.hoehenmeter != null || (z.splits?.length ?? 0) > 0) && (
+        <p className="text-xs text-leise">
+          {[
+            z.quelle && `von der Uhr (${z.quelle.toUpperCase()})`,
+            z.hoehenmeter != null && `${z.hoehenmeter} Höhenmeter`,
+            (z.splits?.length ?? 0) > 0 && `km-Zeiten: ${z.splits!.map((x) => dauerText(x)).join(" · ")}`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      )}
       <div className="flex items-center gap-2">
         <span className="flex-1 text-sm text-leise">
           {p ? (
@@ -82,6 +95,18 @@ export function AusdauerFelder({
             "Pace erscheint, sobald Zeit und Strecke eingetragen sind."
           )}
         </span>
+        {bearbeitbar && (
+          <UhrImport
+            uebernehmen={(e) =>
+              setzen({
+                dauer_sek: e.dauer_sek ?? satz.dauer_sek,
+                distanz_m: e.distanz_m ?? satz.distanz_m,
+                puls_schnitt: e.puls_schnitt ?? satz.puls_schnitt ?? null,
+                zusatz: { ...(satz.zusatz ?? {}), quelle: e.quelle, hoehenmeter: e.hoehenmeter, splits: e.splits.slice(0, 200) },
+              })
+            }
+          />
+        )}
         {stoppuhr && (
           <button
             type="button"
