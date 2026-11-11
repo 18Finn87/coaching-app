@@ -35,7 +35,7 @@ export type Satz = {
   pause_sek: number | null;
   dauer_sek: number | null;
   distanz_m: number | null;
-  zusatz?: { intensitaet?: Intensitaet } & Record<string, unknown>;
+  zusatz?: { intensitaet?: Intensitaet; serienende?: boolean } & Record<string, unknown>;
 };
 
 export type PlanUebung = {

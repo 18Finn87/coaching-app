@@ -2,6 +2,7 @@
 
 import { hatLast } from "@/lib/uebungen";
 import { INTENSITAET_ART, paceLesen, paceText, type Intensitaet } from "@/lib/ausdauer";
+import { blockSaetze, blockText, type BlockEingabe } from "@/lib/intervall";
 import { useCallback, useEffect, useState } from "react";
 import { Karte } from "./Bausteine";
 import { UebungAuswahl } from "./UebungAuswahl";
@@ -11,6 +12,7 @@ import {
   type Einheit,
   type PlanUebung,
   type Satz,
+  zeitText,
 } from "@/lib/plaene";
 import { supabase } from "@/lib/supabase";
 
@@ -210,6 +212,7 @@ function EinheitKarte({
                 .select("id")
                 .single();
               if (neu.error) return neu;
+              if (uebung.messart === "intervall") return neu;
               // Mit einem ersten Satz beginnen
               const vorgabe =
                 uebung.messart === "zeit" || uebung.messart === "zeit_last"
@@ -255,6 +258,7 @@ function UebungBlock({
   const mitZeit = messart === "zeit" || messart === "zeit_last";
   const mitStrecke = messart === "distanz" || messart === "distanz_last";
   const mitLast = hatLast(messart);
+  const intervall = messart === "intervall";
 
   return (
     <div className="rounded-xl border border-rand p-3">
@@ -317,10 +321,27 @@ function UebungBlock({
             mitStrecke={mitStrecke}
             mitLast={mitLast}
             ausdauer={messart === "ausdauer"}
+            intervall={intervall}
             aendern={aendern}
           />
         ))}
       </div>
+
+      {intervall && pu.plan_saetze.length > 0 && (
+        <p className="mt-2 text-sm font-medium">{blockText(pu.plan_saetze, zeitText)}</p>
+      )}
+      {intervall && (
+        <IntervallBaukasten
+          leer={pu.plan_saetze.length === 0}
+          erzeugen={(b) => {
+            const start = (pu.plan_saetze[pu.plan_saetze.length - 1]?.satznummer ?? 0) + 1;
+            aendern(() =>
+              sb.from("plan_saetze").insert(blockSaetze(b, start).map((x) => ({ plan_uebung_id: pu.id, ...x }))),
+            );
+          }}
+          alleEntfernen={() => aendern(() => sb.from("plan_saetze").delete().eq("plan_uebung_id", pu.id))}
+        />
+      )}
 
       <button
         type="button"
@@ -338,6 +359,8 @@ function UebungBlock({
                 pause_sek: letzter.pause_sek,
                 dauer_sek: letzter.dauer_sek,
                 distanz_m: letzter.distanz_m,
+                // Intensität mitnehmen, aber nicht das Serienende
+                zusatz: (({ serienende: _weg, ...rest }) => (void _weg, rest))(letzter.zusatz ?? {}),
               }
             : {};
           aendern(() =>
@@ -350,7 +373,7 @@ function UebungBlock({
         }}
         className="mt-2 h-10 w-full rounded-lg border border-dashed border-rand text-sm font-medium text-leise"
       >
-        + Satz (wie der letzte)
+        {intervall ? "+ Runde (wie die letzte)" : "+ Satz (wie der letzte)"}
       </button>
     </div>
   );
@@ -363,6 +386,7 @@ function SatzZeile({
   mitStrecke,
   mitLast,
   ausdauer = false,
+  intervall = false,
   aendern,
 }: {
   satz: Satz;
@@ -371,6 +395,7 @@ function SatzZeile({
   mitStrecke: boolean;
   mitLast: boolean;
   ausdauer?: boolean;
+  intervall?: boolean;
   aendern: Aendern;
 }) {
   const sb = supabase();
@@ -409,7 +434,10 @@ function SatzZeile({
   return (
     <div className="rounded-lg bg-background/60 p-2">
       <div className="mb-1.5 flex items-center gap-2">
-        <span className="text-sm font-medium">Satz {satz.satznummer}</span>
+        <span className="text-sm font-medium">
+          {intervall ? "Runde" : "Satz"} {satz.satznummer}
+          {intervall && satz.zusatz?.serienende && <span className="ml-1 text-xs font-normal text-leise">· Serienende</span>}
+        </span>
         <select
           aria-label="Satztyp"
           value={satz.satztyp}
@@ -454,12 +482,14 @@ function SatzZeile({
         )}
         {!ausdauer && mitZeit && zahlFeld("dauer_sek", "Dauer (s)", { ganz: true, min: 1, max: 86400 })}
         {!ausdauer && mitStrecke && zahlFeld("distanz_m", "Strecke (m)", { ganz: true, min: 1, max: 100000 })}
+        {intervall && zahlFeld("dauer_sek", "Zeit (s)", { ganz: true, min: 1, max: 86400 })}
+        {intervall && zahlFeld("distanz_m", "Strecke (m)", { ganz: true, min: 1, max: 100000 })}
         {mitLast && zahlFeld("last_kg", "kg", { min: 0, max: 1000 })}
         {mitLast && zahlFeld("last_prozent", "% 1RM", { min: 1, max: 120 })}
-        {!ausdauer && zahlFeld("rir_ziel", "RIR", { min: 0, max: 10 })}
+        {!ausdauer && !intervall && zahlFeld("rir_ziel", "RIR", { min: 0, max: 10 })}
         {zahlFeld("pause_sek", "Pause (s)", { ganz: true, min: 0, max: 1800 })}
       </div>
-      {ausdauer && <IntensitaetFeld wert={intensitaet} setzen={intensitaetSetzen} />}
+      {(ausdauer || intervall) && <IntensitaetFeld wert={intensitaet} setzen={intensitaetSetzen} />}
     </div>
   );
 }
@@ -561,6 +591,111 @@ function IntensitaetFeld({ wert, setzen }: { wert: Intensitaet | null; setzen: (
             />
           </label>
         ))}
+    </div>
+  );
+}
+
+/** Intervall-Block erzeugen: Runden × Belastung, Pause, Serien mit Serienpause. */
+function IntervallBaukasten({
+  leer,
+  erzeugen,
+  alleEntfernen,
+}: {
+  leer: boolean;
+  erzeugen: (b: BlockEingabe) => void;
+  alleEntfernen: () => void;
+}) {
+  const [offen, setOffen] = useState(leer);
+  const [w, setW] = useState({ runden: "6", serien: "1", art: "strecke" as "zeit" | "strecke", wert: "400", pause: "90", serienpause: "180" });
+  const [fehler, setFehler] = useState("");
+  const zahl = (t: string) => Number(t.replace(",", "."));
+
+  if (!offen) {
+    return (
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button type="button" onClick={() => setOffen(true)} className="h-10 rounded-lg border border-rand px-3 text-sm font-medium">
+          + Block hinzufügen
+        </button>
+        {!leer && (
+          <button type="button" onClick={alleEntfernen} className="h-10 rounded-lg border border-rand px-3 text-sm text-leise">
+            Alle Runden entfernen
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  function los() {
+    const b: BlockEingabe = {
+      runden: zahl(w.runden),
+      serien: zahl(w.serien),
+      art: w.art,
+      wert: zahl(w.wert),
+      pauseSek: zahl(w.pause),
+      serienpauseSek: zahl(w.serienpause),
+    };
+    const ganz = (n: number, min: number, max: number) => Number.isInteger(n) && n >= min && n <= max;
+    if (
+      !ganz(b.runden, 1, 30) ||
+      !ganz(b.serien, 1, 10) ||
+      b.runden * b.serien > 50 ||
+      !ganz(b.wert, 1, b.art === "zeit" ? 3600 : 50000) ||
+      !ganz(b.pauseSek, 0, 1800) ||
+      !ganz(b.serienpauseSek, 0, 1800)
+    ) {
+      setFehler("Bitte ganze Zahlen prüfen: 1–30 Runden, 1–10 Serien (höchstens 50 Runden), Pausen bis 1800 s.");
+      return;
+    }
+    setFehler("");
+    erzeugen(b);
+    setOffen(false);
+  }
+
+  const f = (feld: keyof typeof w, label: string) => (
+    <label className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-[11px] text-leise">{label}</span>
+      <input inputMode="numeric" value={w[feld]} onChange={(e) => setW({ ...w, [feld]: e.target.value })} className={klein} />
+    </label>
+  );
+
+  return (
+    <div className="mt-2 flex flex-col gap-2 rounded-lg border border-akzent/50 p-2">
+      <p className="text-sm font-medium">Intervall-Block</p>
+      <div className="flex gap-2" role="group" aria-label="Belastung nach">
+        {(["strecke", "zeit"] as const).map((a) => (
+          <button
+            key={a}
+            type="button"
+            aria-pressed={w.art === a}
+            onClick={() => setW({ ...w, art: a, wert: a === "zeit" ? "60" : "400" })}
+            className={`h-9 flex-1 rounded-lg border text-sm ${w.art === a ? "border-akzent bg-akzent/15 text-akzent" : "border-rand"}`}
+          >
+            {a === "strecke" ? "nach Strecke" : "nach Zeit"}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {f("runden", "Runden")}
+        {f("wert", w.art === "zeit" ? "Belastung (s)" : "Strecke (m)")}
+        {f("pause", "Pause (s)")}
+        {f("serien", "Serien")}
+        {f("serienpause", "Serienpause (s)")}
+      </div>
+      <div className="flex gap-2">
+        <button type="button" onClick={los} className="h-10 flex-1 rounded-lg bg-akzent text-sm font-semibold text-akzent-text">
+          Runden anlegen
+        </button>
+        {!leer && (
+          <button type="button" onClick={() => setOffen(false)} className="h-10 rounded-lg border border-rand px-3 text-sm">
+            Abbrechen
+          </button>
+        )}
+      </div>
+      {fehler && (
+        <p role="alert" className="text-sm text-red-500">
+          {fehler}
+        </p>
+      )}
     </div>
   );
 }

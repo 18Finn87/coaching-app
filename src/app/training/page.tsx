@@ -10,6 +10,8 @@ import { useProfil } from "@/lib/konto";
 import { zeitText } from "@/lib/plaene";
 import { hatLast } from "@/lib/uebungen";
 import { AusdauerFelder } from "@/components/AusdauerFelder";
+import { IntervallRunde } from "@/components/IntervallRunde";
+import { IntervallTimer } from "@/components/IntervallTimer";
 import { dauerText, intensitaetText, kmText } from "@/lib/ausdauer";
 import {
   hochladen,
@@ -315,6 +317,14 @@ function leererSatz(nr: number, vorgabe: Vorgabe): TSatz {
 
 function vorgabeText(v: Vorgabe, messart: string): string {
   const teile: string[] = [];
+  if (messart === "intervall") {
+    if (v.distanz_m) teile.push(`${v.distanz_m} m`);
+    else if (v.dauer_sek) teile.push(zeitText(v.dauer_sek));
+    const i = intensitaetText(v.intensitaet);
+    if (i) teile.push(i);
+    if (v.pause_sek) teile.push(`dann ${zeitText(v.pause_sek)} Pause`);
+    return teile.join(" · ");
+  }
   if (messart === "ausdauer") {
     if (v.dauer_sek) teile.push(`${dauerText(v.dauer_sek)} min`);
     if (v.distanz_m) teile.push(kmText(v.distanz_m));
@@ -357,6 +367,8 @@ function UebungKarte({
   const mitLast = hatLast(u.messart);
   const mitMesswert = u.messart === "umfang";
   const ausdauer = u.messart === "ausdauer";
+  const intervall = u.messart === "intervall";
+  const [timer, setTimer] = useState(false);
   const seiten = u.seiten_getrennt ?? u.saetze.some((s) => s.seite);
   const [uhr, setUhr] = useState<string | null>(null);
 
@@ -401,6 +413,24 @@ function UebungKarte({
         )}
       </div>
 
+      {intervall && bearbeitbar && u.saetze.some((x) => !x.erledigt) && (
+        <button
+          type="button"
+          onClick={() => setTimer(true)}
+          className="mb-2 h-12 w-full rounded-xl bg-akzent font-semibold text-akzent-text"
+        >
+          ▶ Intervall-Timer starten
+        </button>
+      )}
+      {timer && (
+        <IntervallTimer
+          titel={u.uebung_name}
+          runden={u.saetze}
+          rundeFertig={(id, werte) => satzAendern(u.id, id, werte)}
+          schliessen={() => setTimer(false)}
+        />
+      )}
+
       <div className="flex flex-col gap-2">
         {u.saetze.map((s) => {
           // Bei getauschter Übung passt das geplante Gewicht nicht – nur Wdh./RIR zeigen
@@ -415,7 +445,7 @@ function UebungKarte({
             >
               <div className="mb-1 flex items-center justify-between gap-2 text-xs text-leise">
                 <span>
-                  Satz {s.satznummer}
+                  {intervall ? "Runde" : "Satz"} {s.satznummer}
                   {s.seite && <strong className="font-semibold text-foreground"> · {s.seite === "links" ? "links" : "rechts"}</strong>}
                   {s.satztyp !== "arbeit" ? ` · ${s.satztyp === "aufwaermen" ? "Aufwärmen" : s.satztyp}` : ""}
                   {vt ? ` · Vorgabe: ${vt}` : ""}
@@ -447,6 +477,14 @@ function UebungKarte({
                   setzen={(werte) => satzAendern(u.id, s.id, werte)}
                   stoppuhr={bearbeitbar ? () => setUhr(s.id) : undefined}
                   abhaken={() => satzErledigt(u, s)}
+                  bearbeitbar={bearbeitbar}
+                />
+              ) : intervall ? (
+                <IntervallRunde
+                  satz={s}
+                  aus={!bearbeitbar}
+                  setzen={(werte) => satzAendern(u.id, s.id, werte)}
+                  abhaken={() => satzAendern(u.id, s.id, { erledigt: !s.erledigt })}
                   bearbeitbar={bearbeitbar}
                 />
               ) : (
@@ -602,7 +640,9 @@ function UebungKarte({
           }}
         />
       )}
-      {ausdauer ? (
+      {intervall ? (
+        <p className="mt-2 text-[11px] text-leise">Der Timer trägt jede Runde selbst ein. Bei Strecken-Intervallen misst er die Zeit bis „Runde fertig“.</p>
+      ) : ausdauer ? (
         <p className="mt-2 text-[11px] text-leise">Pace rechnet die App aus Zeit und Strecke. Puls ist freiwillig. Anstrengung = deine Einschätzung (1–10).</p>
       ) : u.messart === "umfang" ? (
         <p className="mt-2 text-[11px] text-leise">Messwert in cm. Minuswerte mit „-“ eingeben (z. B. -3).</p>

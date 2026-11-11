@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { Karte } from "./Bausteine";
 import { Liniendiagramm } from "./Liniendiagramm";
 import { WochenUmfang } from "./WochenUmfang";
+import { IntervallAuswertung } from "./IntervallAuswertung";
 import { paceText, pulszonen, type AusdauerAbschnitt, type Pulswerte } from "@/lib/ausdauer";
 import { auswerten, type AEinheit } from "@/lib/auswertung";
 import { FORMELN, STANDARD_FORMEL, STANDARD_MAX_WDH, type Formel } from "@/lib/e1rm";
@@ -92,7 +93,7 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
   const zonen = pulszonen(puls)?.zonen;
   const ausdauerAbschnitte: AusdauerAbschnitt[] = (einheiten ?? []).flatMap((e) =>
     e.uebungen
-      .filter((u) => u.messart === "ausdauer")
+      .filter((u) => u.messart === "ausdauer" || u.messart === "intervall")
       .flatMap((u) =>
         u.saetze
           .filter((s) => s.erledigt && s.satztyp !== "aufwaermen")
@@ -240,6 +241,8 @@ export function Fortschritt({ athletId, ichId }: { athletId: string; ichId: stri
           />
         </Karte>
       )}
+
+      {ma === "intervall" && <IntervallAuswertung punkte={p} />}
 
       {ausdauer && p.some((x) => x.paceSek != null) && (
         <Karte>

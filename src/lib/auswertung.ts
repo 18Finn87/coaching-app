@@ -59,6 +59,8 @@ export type Punkt = {
   paceSek: number | null;
   /** Ø-Puls (Mittel der eingetragenen Werte) */
   pulsSchnitt: number | null;
+  /** Intervalle: je abgehakter Runde Zeit und Strecke, in Reihenfolge */
+  runden: { zeit: number | null; strecke: number | null; nachStrecke: boolean }[];
   /** Bestwerte je Seite, wenn links und rechts getrennt eingetragen wurden */
   seiten: Record<"links" | "rechts", Seitenwerte | null> | null;
   /** Sätze mit Vorgabe, bei denen Wdh./Zeit/Strecke und Gewicht erreicht wurden */
@@ -184,6 +186,11 @@ export function auswerten(
         summeStrecke,
         messwert,
         paceSek: paceStrecke > 0 ? Math.round(paceZeit / (paceStrecke / 1000)) : null,
+        runden: zaehlend.map((s) => ({
+          zeit: s.dauer_sek ?? null,
+          strecke: s.distanz_m ?? null,
+          nachStrecke: s.vorgabe?.distanz_m != null,
+        })),
         pulsSchnitt: pulse.length ? Math.round(pulse.reduce((x, y) => x + y, 0) / pulse.length) : null,
         seiten: seiten.links || seiten.rechts ? seiten : null,
         vorgabeErreicht: erreicht,
