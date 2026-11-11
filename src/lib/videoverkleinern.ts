@@ -68,6 +68,36 @@ function warte(video: HTMLVideoElement, ereignis: string, ms: number): Promise<v
   });
 }
 
+/** Tatsächliche Länge eines aufgenommenen Videos (WebM nennt sie erst nach einem Sprung ans Ende) */
+async function laengeVon(blob: Blob): Promise<number> {
+  const url = URL.createObjectURL(blob);
+  const v = document.createElement("video");
+  v.muted = true;
+  v.preload = "metadata";
+  v.src = url;
+  try {
+    await warte(v, "loadedmetadata", 10000);
+    if (Number.isFinite(v.duration)) return v.duration;
+    const fertig = new Promise<number>((ok) => {
+      const t = setTimeout(() => ok(0), 5000);
+      v.addEventListener("durationchange", () => {
+        if (Number.isFinite(v.duration)) {
+          clearTimeout(t);
+          ok(v.duration);
+        }
+      });
+    });
+    v.currentTime = 1e6;
+    return await fertig;
+  } catch {
+    return 0;
+  } finally {
+    v.removeAttribute("src");
+    v.load();
+    URL.revokeObjectURL(url);
+  }
+}
+
 export async function verkleinern(datei: File, fortschritt: (anteil: number) => void): Promise<Verkleinert> {
   const url = URL.createObjectURL(datei);
   const video = document.createElement("video");
@@ -120,6 +150,13 @@ export async function verkleinern(datei: File, fortschritt: (anteil: number) => 
       fortschritt(Math.min(0.99, video.currentTime / dauer));
     };
 
+    // Geht die App in den Hintergrund, liefert der Browser keine neuen Bilder mehr
+    let versteckt = document.visibilityState === "hidden";
+    const sichtbarkeit = () => {
+      if (document.visibilityState === "hidden") versteckt = true;
+    };
+    document.addEventListener("visibilitychange", sichtbarkeit);
+
     rec.start(500);
     const ende = warte(video, "ended", (dauer + 20) * 1000);
     await video.play();
@@ -128,6 +165,7 @@ export async function verkleinern(datei: File, fortschritt: (anteil: number) => 
       await ende;
     } finally {
       clearInterval(takt);
+      document.removeEventListener("visibilitychange", sichtbarkeit);
     }
     zeichnen();
     rec.stop();
@@ -136,7 +174,8 @@ export async function verkleinern(datei: File, fortschritt: (anteil: number) => 
 
     const blob = new Blob(teile, { type: format.mime });
     // Zu wenige Bilder (z. B. App kurz verlassen): lieber das Original nehmen
-    const genug = bilder >= Math.max(3, dauer * 10);
+    const genug =
+      !versteckt && bilder >= Math.max(3, dauer * 10) && blob.size > 0 && (await laengeVon(blob)) >= dauer * 0.8;
     if (blob.size === 0 || !genug) {
       const mime = originalMime(datei.type);
       if (mime && datei.size <= MAX_BYTES) {
