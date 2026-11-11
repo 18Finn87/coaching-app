@@ -45,7 +45,7 @@ export function originalMime(typ: string): VideoMime | null {
 export type Verkleinert = { blob: Blob; mime: VideoMime; dauer: number; breite: number; hoehe: number; verkleinert: boolean };
 
 export class VideoFehler extends Error {
-  constructor(public grund: "zu_lang" | "zu_gross" | "unlesbar" | "nicht_moeglich") {
+  constructor(public grund: "zu_lang" | "zu_gross" | "unlesbar" | "nicht_moeglich" | "unterbrochen") {
     super(grund);
   }
 }
@@ -109,28 +109,42 @@ export async function verkleinern(datei: File, fortschritt: (anteil: number) => 
     };
     const gestoppt = new Promise<void>((ok) => (rec.onstop = () => ok()));
 
-    let laeuft = true;
+    // Im festen Takt zeichnen (zählt mit, wie viele verschiedene Bilder ankommen)
+    let bilder = 0;
+    let letzteZeit = -1;
     const zeichnen = () => {
-      if (!laeuft) return;
+      if (video.currentTime === letzteZeit) return;
+      letzteZeit = video.currentTime;
       ctx.drawImage(video, 0, 0, ziel.breite, ziel.hoehe);
+      bilder++;
       fortschritt(Math.min(0.99, video.currentTime / dauer));
-      if ("requestVideoFrameCallback" in video) video.requestVideoFrameCallback(zeichnen);
-      else requestAnimationFrame(zeichnen);
     };
 
     rec.start(500);
     const ende = warte(video, "ended", (dauer + 20) * 1000);
     await video.play();
+    const takt = setInterval(zeichnen, 33);
+    try {
+      await ende;
+    } finally {
+      clearInterval(takt);
+    }
     zeichnen();
-    await ende;
-    laeuft = false;
-    ctx.drawImage(video, 0, 0, ziel.breite, ziel.hoehe);
     rec.stop();
     await gestoppt;
     strom.getTracks().forEach((t) => t.stop());
 
     const blob = new Blob(teile, { type: format.mime });
-    if (blob.size === 0) throw new VideoFehler("nicht_moeglich");
+    // Zu wenige Bilder (z. B. App kurz verlassen): lieber das Original nehmen
+    const genug = bilder >= Math.max(3, dauer * 10);
+    if (blob.size === 0 || !genug) {
+      const mime = originalMime(datei.type);
+      if (mime && datei.size <= MAX_BYTES) {
+        fortschritt(1);
+        return { blob: datei, mime, dauer, breite: video.videoWidth, hoehe: video.videoHeight, verkleinert: false };
+      }
+      throw new VideoFehler("unterbrochen");
+    }
     if (blob.size > MAX_BYTES) throw new VideoFehler("zu_gross");
     fortschritt(1);
     return { blob, mime: format.mime, dauer, breite: ziel.breite, hoehe: ziel.hoehe, verkleinert: true };
@@ -147,4 +161,5 @@ export const fehlerText: Record<VideoFehler["grund"], string> = {
   zu_gross: "Das Video ist zu groß (über 50 MB). Bitte kürze es oder nimm es in niedrigerer Auflösung auf.",
   unlesbar: "Das Video lässt sich nicht öffnen. Bitte versuche ein anderes.",
   nicht_moeglich: "Dieser Browser kann das Video nicht verkleinern. Bitte versuche es mit Chrome oder Safari.",
+  unterbrochen: "Das Verkleinern wurde unterbrochen. Bitte lass die App geöffnet, bis es fertig ist, und versuche es erneut.",
 };
