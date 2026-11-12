@@ -5,7 +5,7 @@
  * die App ändert keinen Plan.
  */
 import { supabase } from "./supabase";
-import type { TagesCheckin } from "./tagesabfrage";
+import { heute, type TagesCheckin } from "./tagesabfrage";
 
 export type PunktArt = "ziele" | "nachricht" | "checkin" | "video" | "tagesabfrage" | "reha";
 
@@ -55,8 +55,9 @@ export function punktZiel(p: Pick<OffenerPunkt, "art" | "athlet_id" | "bezug_id"
 /** Videos werden durch die Bewertung erledigt, alles andere auch mit „gesehen“ */
 export const mitGesehen = (art: PunktArt) => art !== "video";
 
+/** Alter in Kalendertagen (Berliner Zeit): heute, seit gestern, seit 3 Tagen */
 export function seitText(seit: string, jetzt = Date.now()): string {
-  const tage = Math.floor((jetzt - Date.parse(seit)) / 86400000);
+  const tage = Math.round((Date.parse(heute(new Date(jetzt))) - Date.parse(heute(new Date(seit)))) / 86400000);
   if (tage <= 0) return "heute";
   if (tage === 1) return "seit gestern";
   return `seit ${tage} Tagen`;

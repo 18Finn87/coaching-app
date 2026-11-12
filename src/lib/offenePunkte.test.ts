@@ -53,5 +53,9 @@ describe("Tagesbriefing", () => {
     const jetzt = Date.parse("2026-11-12T12:00:00Z");
     expect(seitText("2026-11-12T08:00:00Z", jetzt)).toBe("heute");
     expect(seitText("2026-11-09T08:00:00Z", jetzt)).toBe("seit 3 Tagen");
+    // gestern Nachmittag, weniger als 24 Stunden her → trotzdem „seit gestern“
+    expect(seitText("2026-11-11T15:00:00Z", jetzt)).toBe("seit gestern");
+    // kurz nach Mitternacht Berliner Zeit → „heute“
+    expect(seitText("2026-11-11T23:30:00Z", jetzt)).toBe("heute");
   });
 });
