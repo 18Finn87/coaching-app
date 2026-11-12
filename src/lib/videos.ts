@@ -24,6 +24,9 @@ export type Analyse = {
   erstellt_am: string;
   loeschen_am: string;
   video_geloescht_am: string | null;
+  bewertung: "grau" | "gruen" | "orange" | "rot";
+  bewertung_kommentar: string;
+  bewertet_am: string | null;
   uebung?: { name: string } | null;
 };
 
@@ -41,7 +44,7 @@ export type Anmerkung = {
 };
 
 const SPALTEN =
-  "id, athlet_id, hochgeladen_von, uebung_id, titel, pfad, mime, groesse_bytes, dauer_sek, breite, hoehe, erstellt_am, loeschen_am, video_geloescht_am, uebung:uebungen (name)";
+  "id, athlet_id, hochgeladen_von, uebung_id, titel, pfad, mime, groesse_bytes, dauer_sek, breite, hoehe, erstellt_am, loeschen_am, video_geloescht_am, bewertung, bewertung_kommentar, bewertet_am, uebung:uebungen (name)";
 
 export async function analysenLaden(athletId: string): Promise<{ daten: Analyse[]; fehler: boolean }> {
   const { data, error } = await supabase()

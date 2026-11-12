@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { Karte, Seitentitel } from "@/components/Bausteine";
 import { VideoHochladen } from "@/components/VideoHochladen";
+import { AmpelAbzeichen } from "@/components/Ampel";
 import { useEinwilligungen } from "@/lib/einwilligungen";
 import { useProfil } from "@/lib/konto";
 import { supabase } from "@/lib/supabase";
@@ -144,7 +145,10 @@ function Inhalt() {
                     />
                   )}
                   <Link href={`/video/?id=${x.id}`} className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate font-medium">{x.titel || x.uebung?.name || "Video"}</span>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="truncate font-medium">{x.titel || x.uebung?.name || "Video"}</span>
+                      <AmpelAbzeichen bewertung={x.bewertung} />
+                    </span>
                     <span className="text-xs text-leise">
                       {datum(x.erstellt_am)}
                       {x.uebung?.name && x.titel ? ` · ${x.uebung.name}` : ""}

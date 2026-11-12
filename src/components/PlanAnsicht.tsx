@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { satzText, satztypText, versionInhaltLaden, type Einheit } from "@/lib/plaene";
+import { AmpelAnUebung } from "./Ampel";
+import type { AmpelEintrag } from "@/lib/ampel";
 
 /** Zeigt eine Planversion zum Lesen (Coach und Athlet). */
 export function PlanAnsicht({
@@ -9,6 +11,7 @@ export function PlanAnsicht({
   vorgeladen,
   aktion,
   kacheln = false,
+  ampel,
 }: {
   versionId: string;
   /** Bereits geladener Inhalt (z. B. aus dem Speicher auf dem Handy) */
@@ -17,6 +20,8 @@ export function PlanAnsicht({
   aktion?: (e: Einheit) => React.ReactNode;
   /** Trainingstage eingeklappt als Kacheln (Kundenansicht) */
   kacheln?: boolean;
+  /** Kundenansicht: Video-Ampel je Übung (fehlt = nicht anzeigen) */
+  ampel?: Map<string, AmpelEintrag>;
 }) {
   const [offen, setOffen] = useState<string | null>(null);
   const [geladen, setGeladen] = useState<Einheit[] | null>(null);
@@ -73,6 +78,7 @@ export function PlanAnsicht({
                   {u.uebung?.name}
                   {u.uebung?.einseitig && <span className="ml-1 text-xs text-leise">(pro Seite)</span>}
                 </p>
+                {ampel && <AmpelAnUebung uebungId={u.uebung_id} eintrag={ampel.get(u.uebung_id)} />}
                 {u.hinweis && <p className="text-sm text-leise">{u.hinweis}</p>}
                 {u.schmerzgrenze != null && <p className="text-sm text-leise">Schmerz in Ordnung bis {u.schmerzgrenze} von 10</p>}
                 <ul className="mt-1 flex flex-col gap-0.5 text-sm">

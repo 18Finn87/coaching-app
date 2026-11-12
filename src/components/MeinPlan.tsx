@@ -7,6 +7,8 @@ import { Karte } from "./Bausteine";
 import { PlanAnsicht } from "./PlanAnsicht";
 import { versionInhaltLaden } from "@/lib/plaene";
 import { supabase } from "@/lib/supabase";
+import { ampelLaden, type AmpelEintrag } from "@/lib/ampel";
+import { useEinwilligungen } from "@/lib/einwilligungen";
 import { datum } from "@/lib/texte";
 import {
   freiesTraining,
@@ -34,6 +36,13 @@ export function MeinPlan({ athletId }: { athletId: string }) {
   const [plaene, setPlaene] = useState<PlanCache | null>(null);
   const [offline, setOffline] = useState(false);
   const [laufend, setLaufend] = useState<LokalesTraining[]>([]);
+  const { aktiv } = useEinwilligungen();
+  const mitVideos = !!aktiv("videos");
+  const [ampel, setAmpel] = useState<Map<string, AmpelEintrag> | undefined>(undefined);
+  useEffect(() => {
+    if (!mitVideos) return;
+    ampelLaden(athletId).then((m) => setAmpel(m ?? undefined));
+  }, [athletId, mitVideos]);
 
   useEffect(() => {
     let aktiv = true;
@@ -155,6 +164,7 @@ export function MeinPlan({ athletId }: { athletId: string }) {
             versionId={p.versionId}
             vorgeladen={p.einheiten}
             kacheln
+            ampel={mitVideos ? ampel : undefined}
             aktion={(e) => (
               <button
                 type="button"

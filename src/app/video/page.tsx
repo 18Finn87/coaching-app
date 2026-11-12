@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Karte } from "@/components/Bausteine";
 import { ZeichenFlaeche, zeichnungText } from "@/components/Zeichnung";
+import { VideoBewertung } from "@/components/VideoBewertung";
 import { useProfil } from "@/lib/konto";
 import { datum } from "@/lib/texte";
 import {
@@ -140,6 +141,8 @@ function Inhalt() {
           {a.hochgeladen_von !== a.athlet_id ? " · vom Coach hochgeladen" : ""}
         </p>
       </div>
+
+      <VideoBewertung analyse={a} alsCoach={profil.rolle === "coach"} geaendert={laden} />
 
       {url ? (
         <div className="flex flex-col gap-2">

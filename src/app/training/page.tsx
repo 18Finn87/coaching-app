@@ -13,6 +13,8 @@ import { AusdauerFelder } from "@/components/AusdauerFelder";
 import { IntervallRunde } from "@/components/IntervallRunde";
 import { einheitKurz } from "@/lib/athletik";
 import { SchmerzAngabe } from "@/components/SchmerzAngabe";
+import { AmpelAnUebung } from "@/components/Ampel";
+import { ampelLaden, type AmpelEintrag } from "@/lib/ampel";
 import { useEinwilligungen } from "@/lib/einwilligungen";
 import { IntervallTimer } from "@/components/IntervallTimer";
 import { dauerText, intensitaetText, kmText } from "@/lib/ausdauer";
@@ -124,6 +126,13 @@ function Training({
   const [abschluss, setAbschluss] = useState(false);
   const [abbrechenFragen, setAbbrechenFragen] = useState(false);
   const laeuft = e.status === "laeuft";
+  const { aktiv: einwilligung } = useEinwilligungen();
+  const mitVideos = eigenes && !!einwilligung("videos");
+  const [ampel, setAmpel] = useState<Map<string, AmpelEintrag> | undefined>(undefined);
+  useEffect(() => {
+    if (!mitVideos) return;
+    ampelLaden(e.athlet_id).then((m) => setAmpel(m ?? undefined));
+  }, [e.athlet_id, mitVideos]);
 
   const satzAendern = useCallback(
     (uId: string, sId: string, werte: Partial<TSatz>) =>
@@ -187,6 +196,7 @@ function Training({
           satzErledigt={satzErledigt}
           training={training}
           eigenes={eigenes}
+          ampel={ampel}
         />
       ))}
 
@@ -357,6 +367,7 @@ function UebungKarte({
   satzErledigt,
   training,
   eigenes,
+  ampel,
 }: {
   u: TUebung;
   bearbeitbar: boolean;
@@ -366,6 +377,7 @@ function UebungKarte({
   satzErledigt: (u: TUebung, s: TSatz) => void;
   training: LokalesTraining;
   eigenes: boolean;
+  ampel?: Map<string, AmpelEintrag>;
 }) {
   const [tauschen, setTauschen] = useState(false);
   const { aktiv } = useEinwilligungen();
@@ -649,13 +661,10 @@ function UebungKarte({
           }}
         />
       )}
-      {eigenes && bearbeitbar && aktiv("videos") && (
-        <Link
-          href={`/videos/?uebung=${u.uebung_id}`}
-          className="mt-2 inline-block text-sm text-akzent underline underline-offset-4"
-        >
-          🎥 Video zu dieser Übung
-        </Link>
+      {eigenes && aktiv("videos") && (
+        <div className="mt-2">
+          <AmpelAnUebung uebungId={u.uebung_id} eintrag={ampel?.get(u.uebung_id)} mitAktion={bearbeitbar} />
+        </div>
       )}
       {(u.schmerz_abfragen || u.schmerz) && (eigenes || u.schmerz?.wert != null) && (
         <SchmerzAngabe
