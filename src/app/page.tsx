@@ -6,6 +6,7 @@ import { Karte, Seitentitel } from "@/components/Bausteine";
 import { MeinPlan } from "@/components/MeinPlan";
 import { OffeneNachrichten } from "@/components/NachrichtenFuerCoach";
 import { UeberDich } from "@/components/UeberDich";
+import { TagesAbfrage } from "@/components/TagesAbfrage";
 import {
   ausloeserText,
   evaluationenPruefen,
@@ -169,6 +170,7 @@ function Heute() {
   return (
     <>
       <Seitentitel titel="Heute" />
+      <TagesAbfrage athletId={profil.id} />
       {checkinFehlt && (
         <Link
           href="/checkin/"

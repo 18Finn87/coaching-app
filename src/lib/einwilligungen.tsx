@@ -12,7 +12,7 @@ export type EinwilligungArt = "nutzung" | "gesundheitsdaten" | "videos";
  * Die alten Fassungen bleiben in der Versionsgeschichte des Repos nachvollziehbar.
  */
 export const TEXTVERSION: Record<EinwilligungArt, string> = {
-  nutzung: "2026-11-v2",
+  nutzung: "2026-11-v3",
   gesundheitsdaten: "2026-11-v2",
   videos: "2026-11-v1",
 };
@@ -36,6 +36,7 @@ export function einwilligungsText(art: EinwilligungArt, coach: string): {
             "Dein Name und deine E-Mail-Adresse.",
             "Deine Trainingspläne und was du im Training einträgst, zum Beispiel Wiederholungen, Gewichte und deine Einschätzungen.",
             "Deine wöchentlichen Check-ins, zum Beispiel Schlaf, Stress und Energie.",
+            "Deine tägliche Abfrage (Schlaf, Energie, Muskelkater, Stimmung) und Nachrichten an deinen Coach. Zu jedem Wert wird gespeichert, woher er stammt – zum Start immer „selbst eingetragen“. Werte aus Apple Health oder WHOOP kommen nur dazu, wenn du das später ausdrücklich einschaltest.",
             "Puls- und Ausdauerwerte, zum Beispiel Ø-Puls oder Maximalpuls – nur wenn du sie einträgst (freiwillig).",
           ],
         },
