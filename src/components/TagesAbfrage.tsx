@@ -103,7 +103,7 @@ export function TagesAbfrage({ athletId }: { athletId: string }) {
             links={s.links}
             rechts={s.rechts}
             wert={werte[s.feld]}
-            beiWahl={(w) => setWerte({ ...werte, [s.feld]: werte[s.feld] === w ? null : w })}
+            beiWahl={(w) => setWerte((alt) => ({ ...alt, [s.feld]: alt[s.feld] === w ? null : w }))}
           />
           {eintrag?.quellen[s.feld] && eintrag.quellen[s.feld] !== "manuell" && (
             <p className="mt-1 text-xs text-leise">aus {quelleText[eintrag.quellen[s.feld]!]}</p>
