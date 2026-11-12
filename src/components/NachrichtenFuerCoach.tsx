@@ -14,6 +14,12 @@ export function NachrichtenFuerCoach({ athletId }: { athletId: string }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     laden();
   }, [laden]);
+  // Über den Link „#nachrichten“ gekommen: nach dem Laden hinscrollen
+  const geladen = liste !== null;
+  useEffect(() => {
+    if (geladen && window.location.hash === "#nachrichten")
+      document.getElementById("nachrichten")?.scrollIntoView({ block: "start" });
+  }, [geladen]);
 
   if (liste === null) return null;
   const offen = liste.filter((n) => !n.gesehen_am).length;

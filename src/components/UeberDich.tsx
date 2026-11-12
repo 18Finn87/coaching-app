@@ -82,6 +82,13 @@ export function UeberDich({ athletId, coachName }: { athletId: string; coachName
     if (typeof window !== "undefined" && window.location.hash === "#ueber-dich") setOffen(true);
   }, [laden]);
 
+  // Über einen Hinweis gekommen: nach dem Laden hinscrollen
+  const geladen = liste !== null;
+  useEffect(() => {
+    if (geladen && window.location.hash === "#ueber-dich")
+      document.getElementById("ueber-dich")?.scrollIntoView({ block: "start" });
+  }, [geladen]);
+
   const offeneAntworten = (liste ?? []).filter((n) => n.coach_antwort && n.coach_antwort_am).length;
   const status =
     vollstaendig === null ? "…" : vollstaendig ? (offeneAntworten > 0 ? "Erledigt ✓ · Antwort da" : "Erledigt ✓") : "Noch offen";
