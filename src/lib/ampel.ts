@@ -7,24 +7,28 @@ import { supabase } from "./supabase";
 
 export type Bewertung = "grau" | "gruen" | "orange" | "rot";
 
-export const AMPEL: Record<Bewertung, { text: string; symbol: string; klasse: string }> = {
+export const AMPEL: Record<Bewertung, { text: string; kurz: string; symbol: string; klasse: string }> = {
   gruen: {
     text: "Gute Ausführung",
+    kurz: "Gut",
     symbol: "✓",
     klasse: "border-emerald-600/50 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400",
   },
   orange: {
     text: "Verbesserungsbedürftig",
+    kurz: "Verbessern",
     symbol: "!",
     klasse: "border-amber-500/60 bg-amber-500/10 text-amber-700 dark:text-amber-400",
   },
   rot: {
     text: "Nicht korrekt",
+    kurz: "Nicht korrekt",
     symbol: "✕",
     klasse: "border-red-600/50 bg-red-600/10 text-red-700 dark:text-red-400",
   },
   grau: {
     text: "Wartet auf Bewertung",
+    kurz: "Noch offen",
     symbol: "○",
     klasse: "border-rand text-leise",
   },
@@ -56,7 +60,9 @@ export async function ampelLaden(athletId: string): Promise<Map<string, AmpelEin
     .from("analysen")
     .select("id, uebung_id, bewertung, bewertung_kommentar, erstellt_am")
     .eq("athlet_id", athletId)
-    .not("uebung_id", "is", null);
+    .not("uebung_id", "is", null)
+    // Gelöschte Videos zählen nicht mehr – dann gilt wieder „noch nicht gesendet“
+    .is("video_geloescht_am", null);
   if (error) return null;
   return ampelJeUebung((data as Parameters<typeof ampelJeUebung>[0] | null) ?? []);
 }

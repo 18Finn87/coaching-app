@@ -66,13 +66,14 @@ export function VideoBewertung({ analyse, alsCoach, geaendert }: { analyse: Stan
               type="button"
               role="radio"
               aria-checked={wahl === b}
+              title={AMPEL[b].text}
               onClick={() => setWahl(b)}
               className={`flex h-12 items-center justify-center gap-1 rounded-xl border text-sm font-medium ${
                 wahl === b ? AMPEL[b].klasse + " ring-2 ring-current" : "border-rand"
               }`}
             >
               <span aria-hidden>{AMPEL[b].symbol}</span>
-              {b === "grau" ? "Noch offen" : AMPEL[b].text}
+              {AMPEL[b].kurz}
             </button>
           ))}
         </div>
