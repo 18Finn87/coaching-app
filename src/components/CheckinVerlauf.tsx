@@ -6,6 +6,7 @@ import {
   SKALA_KURZ,
   SKALEN,
   checkinAntworten,
+  gruendeText,
   wocheText,
   type Checkin,
   type CheckinGesundheit,
@@ -18,12 +19,15 @@ import {
 export function CheckinVerlauf({
   checkins,
   gesundheit,
+  krank,
   alsCoach = false,
   antwortTitel = "Antwort deines Coaches",
   beiAntwort,
 }: {
   checkins: Checkin[];
   gesundheit: Record<string, CheckinGesundheit>;
+  /** Check-ins, bei denen „Krankheit“ als Grund angegeben ist (geschützt) */
+  krank?: Set<string>;
   alsCoach?: boolean;
   antwortTitel?: string;
   beiAntwort?: () => void;
@@ -42,6 +46,7 @@ export function CheckinVerlauf({
               </div>
             ))}
           </dl>
+          <RueckAusblick c={c} krank={!!krank?.has(c.id)} />
           {c.notiz && <p className="whitespace-pre-wrap text-sm">„{c.notiz}“</p>}
           <GesundheitZeile g={gesundheit[c.id]} />
           {alsCoach ? (
@@ -57,6 +62,37 @@ export function CheckinVerlauf({
         </li>
       ))}
     </ul>
+  );
+}
+
+function RueckAusblick({ c, krank }: { c: Checkin; krank: boolean }) {
+  const rueck = c.woche_bewertung != null || c.gut || c.schwer;
+  if (!rueck && c.ausblick_schwierig == null) return null;
+  return (
+    <div className="flex flex-col gap-1 text-sm">
+      {rueck && (
+        <p>
+          <span className="text-leise">Rückblick: </span>
+          {c.woche_bewertung != null && <span>Woche {c.woche_bewertung}/5. </span>}
+          {c.gut && <span>Gut: „{c.gut}“ </span>}
+          {c.schwer && <span>Schwer: „{c.schwer}“</span>}
+        </p>
+      )}
+      {c.ausblick_schwierig != null && (
+        <p className={c.ausblick_schwierig ? "rounded-lg border border-amber-500/60 bg-amber-500/10 px-2 py-1" : ""}>
+          <span className="text-leise">Ausblick: </span>
+          {c.ausblick_schwierig ? (
+            <>
+              <span aria-hidden>⚠ </span>nächste Woche schwierig
+              {(c.ausblick_gruende.length > 0 || krank) && <> – {gruendeText(c, krank)}</>}
+              {c.ausblick_text && <> („{c.ausblick_text}“)</>}
+            </>
+          ) : (
+            "nächste Woche normal"
+          )}
+        </p>
+      )}
+    </div>
   );
 }
 

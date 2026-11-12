@@ -23,11 +23,13 @@ import { datum } from "@/lib/texte";
 export function CheckinsFuerCoach({ athletId }: { athletId: string }) {
   const [liste, setListe] = useState<Checkin[] | null>(null);
   const [gesundheit, setGesundheit] = useState<Record<string, CheckinGesundheit>>({});
+  const [krank, setKrank] = useState<Set<string>>(new Set());
 
   const laden = useCallback(async () => {
     const [c, g] = await Promise.all([checkinsLaden(athletId, 12), checkinGesundheitLaden(athletId)]);
     setListe(c.daten);
     setGesundheit(g.daten);
+    setKrank(g.krank);
   }, [athletId]);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export function CheckinsFuerCoach({ athletId }: { athletId: string }) {
         {liste === null ? (
           <p className="text-sm text-leise">Lädt …</p>
         ) : (
-          <CheckinVerlauf checkins={liste} gesundheit={gesundheit} alsCoach beiAntwort={laden} />
+          <CheckinVerlauf checkins={liste} gesundheit={gesundheit} krank={krank} alsCoach beiAntwort={laden} />
         )}
         <p className="mt-3 text-xs text-leise">
           Den geschützten Teil (Schmerzen) siehst du nur, solange die Einwilligung zu Gesundheitsdaten gilt.

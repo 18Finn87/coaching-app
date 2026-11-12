@@ -37,7 +37,30 @@ export type Checkin = {
   coach_antwort: string;
   coach_antwort_am: string | null;
   erstellt_am: string;
+  /** Rückblick: Woche 1–5, was lief gut, was war schwer */
+  woche_bewertung: number | null;
+  gut: string;
+  schwer: string;
+  /** Ausblick auf die kommende Woche (Krankheit liegt geschützt getrennt) */
+  ausblick_schwierig: boolean | null;
+  ausblick_gruende: string[];
+  ausblick_text: string;
 };
+
+export const GRUND_TEXT: Record<string, string> = {
+  pruefungen: "Prüfungen",
+  schichtdienst: "Schichtdienst",
+  reise: "Reise",
+  krankheit: "Krankheit",
+  sonstiges: "Sonstiges",
+};
+
+/** Gründe als Text, Krankheit nur wenn bekannt (geschützter Bereich) */
+export function gruendeText(c: Pick<Checkin, "ausblick_gruende">, krank = false): string {
+  const g = [...c.ausblick_gruende];
+  if (krank) g.splice(1, 0, "krankheit");
+  return g.map((x) => GRUND_TEXT[x] ?? x).join(", ");
+}
 
 export type CheckinGesundheit = {
   checkin_id: string;
@@ -69,7 +92,7 @@ export function wocheText(woche: string): string {
 }
 
 const CHECKIN_SPALTEN =
-  "id, athlet_id, woche, schlaf, stress, energie, muskelkater, motivation, notiz, coach_antwort, coach_antwort_am, erstellt_am";
+  "id, athlet_id, woche, schlaf, stress, energie, muskelkater, motivation, notiz, coach_antwort, coach_antwort_am, erstellt_am, woche_bewertung, gut, schwer, ausblick_schwierig, ausblick_gruende, ausblick_text";
 
 export async function checkinsLaden(athletId: string, grenze = 26) {
   const { data, error } = await supabase()
@@ -84,10 +107,33 @@ export async function checkinsLaden(athletId: string, grenze = 26) {
 export async function checkinGesundheitLaden(athletId: string) {
   const { data, error } = await supabase().rpc("checkin_gesundheit_liste", { p_athlet: athletId });
   const liste = (data as CheckinGesundheit[] | null) ?? [];
-  return { daten: Object.fromEntries(liste.map((g) => [g.checkin_id, g])) as Record<string, CheckinGesundheit>, fehler: !!error };
+  const k = await supabase().rpc("checkin_krankheit_liste", { p_athlet: athletId });
+  const krank = new Set(((k.data as { checkin_id: string }[] | null) ?? []).map((x) => x.checkin_id));
+  return {
+    daten: Object.fromEntries(liste.map((g) => [g.checkin_id, g])) as Record<string, CheckinGesundheit>,
+    krank,
+    fehler: !!error,
+  };
 }
 
-export type CheckinEingabe = Pick<Checkin, SkalaFeld | "notiz">;
+export type CheckinEingabe = Pick<Checkin, SkalaFeld | "notiz" | "woche_bewertung" | "gut" | "schwer" | "ausblick_schwierig" | "ausblick_gruende" | "ausblick_text">;
+
+export async function checkinKrankheitSetzen(checkinId: string, krank: boolean) {
+  const { error } = await supabase().rpc("checkin_krankheit_setzen", { p_checkin: checkinId, p_krank: krank });
+  return !error;
+}
+
+/** Coach: Wer hat für diese oder nächste Woche eine schwierige Woche angekündigt? */
+export async function schwierigeWochenLaden(): Promise<(Checkin & { athlet: { anzeigename: string } | null })[]> {
+  const ab = new Date(Date.now() - 7 * 86400000);
+  const { data } = await supabase()
+    .from("checkins")
+    .select(`${CHECKIN_SPALTEN}, athlet:profile!athlet_id (anzeigename)`)
+    .eq("ausblick_schwierig", true)
+    .gte("woche", wochenbeginn(ab))
+    .order("woche", { ascending: false });
+  return (data as unknown as (Checkin & { athlet: { anzeigename: string } | null })[] | null) ?? [];
+}
 
 /** Legt den Check-in der laufenden Woche an oder ändert ihn. Gibt die ID zurück. */
 export async function checkinSpeichern(vorhandenId: string | null, werte: CheckinEingabe): Promise<string | null> {

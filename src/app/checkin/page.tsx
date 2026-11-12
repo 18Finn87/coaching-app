@@ -7,8 +7,10 @@ import { CheckinVerlauf } from "@/components/CheckinVerlauf";
 import { SkalaWahl } from "@/components/SkalaWahl";
 import { regionText } from "@/lib/anamnese";
 import {
+  GRUND_TEXT,
   SKALEN,
   checkinGesundheitLaden,
+  checkinKrankheitSetzen,
   checkinGesundheitLoeschen,
   checkinGesundheitSpeichern,
   checkinSpeichern,
@@ -34,6 +36,7 @@ function CheckinSeite() {
   const profil = useProfil();
   const [liste, setListe] = useState<Checkin[] | null>(null);
   const [gesundheit, setGesundheit] = useState<Record<string, CheckinGesundheit>>({});
+  const [krank, setKrank] = useState<Set<string>>(new Set());
   const [ladeFehler, setLadeFehler] = useState(false);
 
   const laden = useCallback(async () => {
@@ -41,6 +44,7 @@ function CheckinSeite() {
     setLadeFehler(c.fehler);
     setListe(c.daten);
     setGesundheit(g.daten);
+    setKrank(g.krank);
   }, [profil.id]);
 
   useEffect(() => {
@@ -71,13 +75,14 @@ function CheckinSeite() {
             woche={woche}
             vorhanden={aktuell}
             gesundheitVorhanden={aktuell ? gesundheit[aktuell.id] ?? null : null}
+            krankVorhanden={aktuell ? krank.has(aktuell.id) : false}
             beiGespeichert={laden}
           />
         )
       )}
       {frueher.length > 0 && (
         <Karte titel="Frühere Wochen">
-          <CheckinVerlauf checkins={frueher} gesundheit={gesundheit} />
+          <CheckinVerlauf checkins={frueher} gesundheit={gesundheit} krank={krank} />
         </Karte>
       )}
     </>
@@ -88,11 +93,13 @@ function CheckinFormular({
   woche,
   vorhanden,
   gesundheitVorhanden,
+  krankVorhanden,
   beiGespeichert,
 }: {
   woche: string;
   vorhanden: Checkin | null;
   gesundheitVorhanden: CheckinGesundheit | null;
+  krankVorhanden: boolean;
   beiGespeichert: () => void;
 }) {
   const { aktiv } = useEinwilligungen();
@@ -101,6 +108,13 @@ function CheckinFormular({
     vorhanden ? Object.fromEntries(SKALEN.map((s) => [s.feld, vorhanden[s.feld]])) : {},
   );
   const [notiz, setNotiz] = useState(vorhanden?.notiz ?? "");
+  const [bewertung, setBewertung] = useState<number | null>(vorhanden?.woche_bewertung ?? null);
+  const [gut, setGut] = useState(vorhanden?.gut ?? "");
+  const [schwer, setSchwer] = useState(vorhanden?.schwer ?? "");
+  const [schwierig, setSchwierig] = useState<boolean | null>(vorhanden?.ausblick_schwierig ?? null);
+  const [gruende, setGruende] = useState<string[]>(vorhanden?.ausblick_gruende ?? []);
+  const [krank, setKrank] = useState(krankVorhanden);
+  const [aText, setAText] = useState(vorhanden?.ausblick_text ?? "");
   const [schmerz, setSchmerz] = useState<boolean | null>(gesundheitVorhanden?.schmerz_vorhanden ?? null);
   const [region, setRegion] = useState(gesundheitVorhanden?.koerperregion ?? "");
   const [skala, setSkala] = useState<number | null>(gesundheitVorhanden?.skala_0_10 ?? null);
@@ -129,8 +143,17 @@ function CheckinFormular({
       muskelkater: werte.muskelkater!,
       motivation: werte.motivation!,
       notiz: notiz.trim(),
+      woche_bewertung: bewertung,
+      gut: gut.trim(),
+      schwer: schwer.trim(),
+      ausblick_schwierig: schwierig,
+      ausblick_gruende: schwierig ? gruende : [],
+      ausblick_text: schwierig ? aText.trim() : "",
     });
     let ok = !!id;
+    if (id && mitGesundheit && (krank || krankVorhanden)) {
+      ok = (await checkinKrankheitSetzen(id, !!schwierig && krank)) && ok;
+    }
     if (id && mitGesundheit && schmerz !== null) {
       ok = await checkinGesundheitSpeichern(id, { schmerz, region: region || null, skala, notiz: gNotiz.trim() });
     }
@@ -171,6 +194,85 @@ function CheckinFormular({
             beiWahl={(w) => setWerte({ ...werte, [s.feld]: w })}
           />
         ))}
+
+        <fieldset className="flex flex-col gap-3 rounded-xl border border-rand p-3">
+          <legend className="px-1 text-sm font-semibold">Rückblick (freiwillig)</legend>
+          <SkalaWahl
+            name="woche_bewertung"
+            frage="Wie war deine Woche insgesamt?"
+            links="sehr schlecht"
+            rechts="sehr gut"
+            wert={bewertung}
+            beiWahl={(w) => setBewertung((alt) => (alt === w ? null : w))}
+          />
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Was lief gut?
+            <textarea value={gut} maxLength={1000} rows={2} onChange={(e) => setGut(e.target.value)} className={`${feld} py-2`} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm font-medium">
+            Was war schwer?
+            <textarea value={schwer} maxLength={1000} rows={2} onChange={(e) => setSchwer(e.target.value)} className={`${feld} py-2`} />
+          </label>
+        </fieldset>
+
+        <fieldset className="flex flex-col gap-3 rounded-xl border border-rand p-3">
+          <legend className="px-1 text-sm font-semibold">Ausblick</legend>
+          <p className="text-sm">Wird die nächste Woche schwierig?</p>
+          <div className="flex gap-2">
+            {[
+              { w: false, t: "Nein, normal" },
+              { w: true, t: "Ja" },
+            ].map((o) => (
+              <button
+                key={o.t}
+                type="button"
+                aria-pressed={schwierig === o.w}
+                onClick={() => setSchwierig(schwierig === o.w ? null : o.w)}
+                className={`h-11 flex-1 rounded-xl border font-medium ${schwierig === o.w ? "border-akzent bg-akzent text-akzent-text" : "border-rand"}`}
+              >
+                {o.t}
+              </button>
+            ))}
+          </div>
+          {schwierig && (
+            <>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium">Warum? (mehrere möglich)</p>
+                <div className="flex flex-wrap gap-2">
+                  {["pruefungen", "schichtdienst", "reise", ...(mitGesundheit ? ["krankheit"] : []), "sonstiges"].map((g) => {
+                    const an = g === "krankheit" ? krank : gruende.includes(g);
+                    return (
+                      <button
+                        key={g}
+                        type="button"
+                        aria-pressed={an}
+                        onClick={() =>
+                          g === "krankheit"
+                            ? setKrank(!krank)
+                            : setGruende((alt) => (alt.includes(g) ? alt.filter((x) => x !== g) : [...alt, g]))
+                        }
+                        className={`rounded-full border px-3 py-2 text-sm ${an ? "border-akzent bg-akzent/15 text-akzent" : "border-rand"}`}
+                      >
+                        {GRUND_TEXT[g]}
+                      </button>
+                    );
+                  })}
+                </div>
+                {!mitGesundheit && (
+                  <p className="text-xs text-leise">„Krankheit“ kannst du nur mit deiner Einwilligung zu Gesundheitsdaten angeben.</p>
+                )}
+                {mitGesundheit && krank && (
+                  <p className="text-xs text-leise">„Krankheit“ wird geschützt gespeichert – ohne Einzelheiten.</p>
+                )}
+              </div>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Kurz erklärt (freiwillig)
+                <input value={aText} maxLength={500} onChange={(e) => setAText(e.target.value)} placeholder="z. B. Klausuren Montag bis Mittwoch" className={`${feld} h-12`} />
+              </label>
+              <p className="text-xs text-leise">Dein Coach sieht das und kann den Plan rechtzeitig anpassen.</p>
+            </>
+          )}
+        </fieldset>
 
         <label className="flex flex-col gap-1 text-sm font-medium">
           Möchtest du noch etwas sagen? (freiwillig)
