@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Karte, Seitentitel } from "@/components/Bausteine";
 import { MeinPlan } from "@/components/MeinPlan";
-import { OffeneNachrichten } from "@/components/NachrichtenFuerCoach";
-import { SchwierigeWochen } from "@/components/SchwierigeWochen";
+import { OffenePunkte } from "@/components/OffenePunkte";
+import { Tagesbriefing } from "@/components/Tagesbriefing";
 import { UeberDich } from "@/components/UeberDich";
 import { TagesAbfrage } from "@/components/TagesAbfrage";
 import {
@@ -13,7 +13,6 @@ import {
   evaluationenPruefen,
   offeneEvaluationen,
   wochenbeginn,
-  wocheText,
   type Evaluation,
 } from "@/lib/coaching";
 import { useEinwilligungen } from "@/lib/einwilligungen";
@@ -26,12 +25,10 @@ export default function Startseite() {
   return profil.rolle === "athlet" ? <Heute /> : <Uebersicht />;
 }
 
-type OffenerCheckin = { id: string; athlet_id: string; woche: string; athlet: { anzeigename: string } | null };
 type Einheit = { athlet_id: string; athlet: { anzeigename: string } | null };
 
 function Uebersicht() {
   const [evals, setEvals] = useState<Evaluation[] | null>(null);
-  const [checkins, setCheckins] = useState<OffenerCheckin[]>([]);
   const [einheiten, setEinheiten] = useState<{ id: string; name: string; anzahl: number }[]>([]);
 
   useEffect(() => {
@@ -40,14 +37,8 @@ function Uebersicht() {
       // Prüfung sofort für dich ausführen (zusätzlich zur täglichen Prüfung am Morgen)
       await evaluationenPruefen();
       const letzteWoche = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const [e, c, t] = await Promise.all([
+      const [e, t] = await Promise.all([
         offeneEvaluationen(),
-        sb
-          .from("checkins")
-          .select("id, athlet_id, woche, athlet:profile!athlet_id(anzeigename)")
-          .eq("coach_antwort", "")
-          .gte("woche", wochenbeginn(letzteWoche))
-          .order("woche", { ascending: false }),
         sb
           .from("trainingseinheiten")
           .select("athlet_id, athlet:profile!athlet_id(anzeigename)")
@@ -55,7 +46,6 @@ function Uebersicht() {
           .gte("gestartet_am", letzteWoche.toISOString()),
       ]);
       setEvals(e.daten);
-      setCheckins((c.data as unknown as OffenerCheckin[] | null) ?? []);
       const zaehler = new Map<string, { id: string; name: string; anzahl: number }>();
       for (const x of (t.data as unknown as Einheit[] | null) ?? []) {
         const z = zaehler.get(x.athlet_id) ?? { id: x.athlet_id, name: x.athlet?.anzeigename || "Ohne Namen", anzahl: 0 };
@@ -72,6 +62,13 @@ function Uebersicht() {
     <>
       <Seitentitel titel="Übersicht" />
 
+      <Tagesbriefing faelligeEvaluationen={evals === null ? null : evals.length} />
+
+      <div id="offene-punkte" className="scroll-mt-20">
+        <OffenePunkte grenze={10} />
+      </div>
+
+      <div id="evaluationen" className="scroll-mt-20">
       <Karte titel="Fällige Evaluationen">
         {evals === null ? (
           <p className="text-sm text-leise">Lädt …</p>
@@ -102,29 +99,7 @@ function Uebersicht() {
           Die App erinnert dich nur. Ob ein Plan geändert wird, entscheidest du.
         </p>
       </Karte>
-
-      <OffeneNachrichten />
-      <SchwierigeWochen />
-
-      <Karte titel="Check-ins ohne Antwort">
-        {checkins.length === 0 ? (
-          <p className="text-sm text-leise">Alles beantwortet.</p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {checkins.map((c) => (
-              <li key={c.id}>
-                <Link
-                  href={`/athlet/?id=${c.athlet_id}#checkins`}
-                  className="flex items-center justify-between rounded-xl border border-rand px-3 py-2 hover:border-akzent"
-                >
-                  <span className="font-medium">{c.athlet?.anzeigename || "Ohne Namen"}</span>
-                  <span className="text-sm text-leise">{wocheText(c.woche)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Karte>
+      </div>
 
       <Karte titel="Einheiten der letzten 7 Tage">
         {einheiten.length === 0 ? (

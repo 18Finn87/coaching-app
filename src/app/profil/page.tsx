@@ -8,6 +8,7 @@ import { FormelEinstellung } from "@/components/FormelEinstellung";
 import { EinwilligungenVerwalten } from "@/components/EinwilligungenVerwalten";
 import { MeineBetreuung } from "@/components/MeineBetreuung";
 import { RegelEinstellung } from "@/components/RegelEinstellung";
+import { BriefingEinstellung } from "@/components/BriefingEinstellung";
 import { KontoWechsel } from "@/components/KontoWechsel";
 import { abmelden } from "@/lib/kontowechsel";
 import { StammdatenFormular } from "@/components/StammdatenFormular";
@@ -121,6 +122,7 @@ export default function ProfilSeite() {
         <>
           <FormelEinstellung coachId={profil.id} />
           <RegelEinstellung />
+          <BriefingEinstellung />
           <Karte titel="Datenschutz">
             <p className="text-sm text-leise">
               Die Einwilligungen deiner Athletinnen und Athleten siehst du unter „Athleten“.

@@ -11,6 +11,7 @@ import { EinheitenListe } from "@/components/EinheitenListe";
 import { Fortschritt } from "@/components/Fortschritt";
 import { NachrichtenFuerCoach } from "@/components/NachrichtenFuerCoach";
 import { TagesVerlauf } from "@/components/TagesVerlauf";
+import { OffenePunkte } from "@/components/OffenePunkte";
 import { PulsEinstellung } from "@/components/PulsEinstellung";
 import { useProfil } from "@/lib/konto";
 import { stammdatenLaden, type Stammdaten } from "@/lib/stammdaten";
@@ -143,11 +144,15 @@ function Inhalt() {
 
           <EvaluationenFuerCoach athletId={b.athlet_id} stufe={b.erfahrungsstufe as Stufe} />
 
+          <OffenePunkte athletId={b.athlet_id} titel="Offen bei dieser Person" />
+
           <div id="nachrichten" className="scroll-mt-20">
             <NachrichtenFuerCoach athletId={b.athlet_id} />
           </div>
 
-          <TagesVerlauf athletId={b.athlet_id} />
+          <div id="tagesabfrage" className="scroll-mt-20">
+            <TagesVerlauf athletId={b.athlet_id} />
+          </div>
 
           <CheckinsFuerCoach athletId={b.athlet_id} />
 
