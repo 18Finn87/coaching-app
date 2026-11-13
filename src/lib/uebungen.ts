@@ -166,6 +166,9 @@ export function eigeneArt(u: { modul: string; messart: string }): string {
 
 export type EigeneEingabe = { name: string; art: string; einseitig: boolean; beschreibung: string; video_link: string | null };
 
+/** Leerzeichen am Rand weg, mehrere Leerzeichen zu einem */
+export const nameBereinigen = (n: string) => n.trim().replace(/\s+/g, " ").slice(0, 80);
+
 /** Kunde: eigene Übung anlegen (id leer) oder ändern. Liefert die Übung oder einen Fehlertext. */
 export async function eigeneUebungSpeichern(
   id: string | null,
@@ -173,7 +176,7 @@ export async function eigeneUebungSpeichern(
   e: EigeneEingabe,
   vorhandene: { id: string; name: string }[] = [],
 ): Promise<{ uebung: Uebung | null; fehler: string | null }> {
-  const name = e.name.trim().replace(/s+/g, " ").slice(0, 80);
+  const name = nameBereinigen(e.name);
   if (!name) return { uebung: null, fehler: "Bitte gib einen Namen ein." };
   if (vorhandene.some((u) => u.id !== id && u.name.toLowerCase() === name.toLowerCase()))
     return { uebung: null, fehler: "Eine Übung mit diesem Namen gibt es schon – du kannst sie direkt auswählen." };

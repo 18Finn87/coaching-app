@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { EigeneUebungFormular } from "./EigeneUebung";
-import { EIGENE_ARTEN, eigeneArt, eigeneUebungSpeichern, messartText, modulText } from "@/lib/uebungen";
+import { EIGENE_ARTEN, eigeneArt, eigeneUebungSpeichern, messartText, modulText, nameBereinigen } from "@/lib/uebungen";
 import { artText } from "@/lib/nachrichten";
 
 describe("Eigene Übungen", () => {
@@ -12,6 +12,10 @@ describe("Eigene Übungen", () => {
       expect(eigeneArt(a)).toBe(a.wert);
     }
     expect(eigeneArt({ modul: "athletik", messart: "test" })).toBe("kraft_last");
+  });
+
+  it("bereinigt nur Leerzeichen im Namen", () => {
+    expect(nameBereinigen("  Test:   Bulgarian  Split Squats ")).toBe("Test: Bulgarian Split Squats");
   });
 
   it("prüft vor dem Speichern verständlich", async () => {
