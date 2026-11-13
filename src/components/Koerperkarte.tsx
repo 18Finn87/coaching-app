@@ -1,14 +1,18 @@
 "use client";
 
-import { STELLEN, type Ansicht, type Form } from "@/lib/koerper";
+import { LINIEN, SILHOUETTE_HALB, STELLEN, type Ansicht, type Form } from "@/lib/koerper";
 
-function Umriss() {
-  // Dezente Silhouette als Hintergrund (nicht anklickbar)
+const SPIEGEL = "matrix(-1 0 0 1 200 0)";
+
+function Umriss({ ansicht }: { ansicht: Ansicht }) {
+  // Silhouette als Hintergrund (nicht anklickbar)
   return (
-    <g fill="currentColor" opacity={0.08}>
-      <ellipse cx={100} cy={34} rx={23} ry={28} />
-      <rect x={90} y={58} width={20} height={20} rx={6} />
-      <path d="M58 78 Q100 66 142 78 L150 100 L163 210 L150 226 L138 160 L130 180 L132 400 L104 410 L100 230 L96 410 L68 400 L70 180 L62 160 L50 226 L37 210 L50 100 Z" />
+    <g pointerEvents="none">
+      <g fill="currentColor" opacity={0.1}>
+        <path d={SILHOUETTE_HALB} />
+        <path d={SILHOUETTE_HALB} transform={SPIEGEL} />
+      </g>
+      <path d={LINIEN[ansicht]} fill="none" stroke="currentColor" strokeOpacity={0.22} strokeWidth={0.8} strokeLinecap="round" />
     </g>
   );
 }
@@ -28,9 +32,10 @@ function Flaeche({
 }) {
   const gemeinsam = {
     className: `${an ? "fill-amber-500 stroke-amber-700" : "fill-current stroke-current"} ${aktiv ? "cursor-pointer" : ""}`,
-    fillOpacity: an ? 0.85 : 0.14,
-    strokeOpacity: an ? 1 : 0.35,
-    strokeWidth: an ? 2 : 1,
+    fillOpacity: an ? 0.85 : 0.16,
+    strokeOpacity: an ? 1 : 0.4,
+    strokeWidth: an ? 1.5 : 0.8,
+    strokeLinejoin: "round" as const,
     role: aktiv ? "checkbox" : undefined,
     "aria-checked": aktiv ? an : undefined,
     "aria-label": text,
@@ -50,9 +55,9 @@ function Flaeche({
       <title>{text}</title>
     </ellipse>
   ) : (
-    <rect x={form.x} y={form.y} width={form.b} height={form.h} rx={6} {...gemeinsam}>
+    <path d={form.d} transform={form.gespiegelt ? SPIEGEL : undefined} {...gemeinsam}>
       <title>{text}</title>
-    </rect>
+    </path>
   );
 }
 
@@ -69,7 +74,7 @@ function Figur({
   return (
     <figure className="flex min-w-0 flex-1 flex-col items-center">
       <svg viewBox="0 0 200 420" className="h-auto w-full max-w-[13rem] text-foreground" role="group" aria-label={`Körper von ${ansicht}`}>
-        <Umriss />
+        <Umriss ansicht={ansicht} />
         {STELLEN.filter((s) => s.ansicht === ansicht).map((s) => (
           <Flaeche
             key={`${ansicht}-${s.id}`}
