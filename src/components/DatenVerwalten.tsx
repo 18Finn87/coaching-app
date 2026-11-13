@@ -25,7 +25,7 @@ export function DatenVerwalten() {
     setLaeuft(true);
     setMeldung(null);
     const sb = supabase();
-    const [profil, betreuung, stamm, einw, anamnese, beschwerden, protokoll, checkins, cGesundheit, krank, reha, trainings, maxtests, hinweise, ausdauer, analysen, tagesabfrage, nachrichten] = await Promise.all([
+    const [profil, betreuung, stamm, einw, anamnese, beschwerden, protokoll, checkins, cGesundheit, krank, reha, trainings, maxtests, hinweise, ausdauer, analysen, tagesabfrage, nachrichten, eigeneUebungen] = await Promise.all([
       sb.from("profile").select("rolle, anzeigename, erstellt_am").eq("id", id).maybeSingle(),
       sb
         .from("coach_athlet")
@@ -50,12 +50,13 @@ export function DatenVerwalten() {
       sb.from("athlet_ausdauer").select("hf_max, hf_schwelle, aktualisiert_am").eq("athlet_id", id).maybeSingle(),
       sb.from("analysen").select("id, titel, uebung_id, mime, groesse_bytes, dauer_sek, erstellt_am, loeschen_am, video_geloescht_am, hochgeladen_von, analyse_anmerkungen (zeit_sek, text, zeichnung, autor_id, erstellt_am)").eq("athlet_id", id).order("erstellt_am"),
       sb.from("tages_checkins").select("datum, schlaf_stunden, schlaf_qualitaet, energie, muskelkater, stimmung, quellen, aktualisiert_am").eq("athlet_id", id).order("datum"),
-      sb.from("kunden_nachrichten").select("art, text, erstellt_am, coach_antwort, coach_antwort_am, gesehen_am").eq("athlet_id", id).order("erstellt_am"),
+      sb.from("kunden_nachrichten").select("art, text, erstellt_am, coach_antwort, coach_antwort_am, gesehen_am, uebung_id").eq("athlet_id", id).order("erstellt_am"),
+      sb.from("uebungen").select("id, name, modul, messart, einseitig, beschreibung, video_link, archiviert, erstellt_am").eq("privat_fuer", id).order("name"),
     ]);
     setLaeuft(false);
 
     const fehler =
-      [profil, betreuung, stamm, einw, checkins, cGesundheit, krank, reha, trainings, maxtests, hinweise, ausdauer, analysen, nachrichten, tagesabfrage].some((x) => x.error) ||
+      [profil, betreuung, stamm, einw, checkins, cGesundheit, krank, reha, trainings, maxtests, hinweise, ausdauer, analysen, nachrichten, tagesabfrage, eigeneUebungen].some((x) => x.error) ||
       anamnese.fehler ||
       beschwerden.fehler ||
       protokoll.fehler;
@@ -76,6 +77,7 @@ export function DatenVerwalten() {
       maximaltests: maxtests.data,
       pulswerte: ausdauer.data,
       nachrichten_an_coach: nachrichten.data,
+      eigene_uebungen: eigeneUebungen.data,
       tagesabfrage: tagesabfrage.data,
       videoanalysen: {
         hinweis: "Die Videos selbst sind nicht in dieser Datei. Du kannst sie in der App ansehen, solange sie gespeichert sind.",

@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { modulText, musterText, uebungenLaden, type Uebung } from "@/lib/uebungen";
+import { useProfil } from "@/lib/konto";
+import { supabase } from "@/lib/supabase";
+import { EigeneUebungFormular } from "./EigeneUebung";
 
 function normal(text: string): string {
   return text
@@ -12,14 +15,24 @@ function normal(text: string): string {
     .replace(/ß/g, "ss");
 }
 
-/** Übung aus der Bibliothek wählen (archivierte werden nicht angeboten). */
+/**
+ * Übung aus der Bibliothek wählen (archivierte werden nicht angeboten).
+ * Kunden können hier auch eine eigene Übung anlegen. Im Plan-Editor
+ * (fuerPlanEinheit) zeigt sie dem Coach nur eigene Übungen genau dieser Person.
+ */
 export function UebungAuswahl({
   waehlen,
   abbrechen,
+  fuerPlanEinheit,
 }: {
   waehlen: (u: Uebung) => void;
   abbrechen: () => void;
+  fuerPlanEinheit?: string;
 }) {
+  const profil = useProfil();
+  const coach = profil.rolle === "coach";
+  const [neu, setNeu] = useState(false);
+  const [planAthlet, setPlanAthlet] = useState<string | null>(null);
   const [alle, setAlle] = useState<Uebung[] | null>(null);
   const [suche, setSuche] = useState("");
   const [modul, setModul] = useState("");
@@ -27,14 +40,46 @@ export function UebungAuswahl({
   useEffect(() => {
     uebungenLaden().then(({ daten }) => setAlle(daten.filter((u) => !u.archiviert)));
   }, []);
+  useEffect(() => {
+    if (!coach || !fuerPlanEinheit) return;
+    supabase()
+      .from("plan_einheiten")
+      .select("planversion:planversionen (plan:plaene (athlet_id))")
+      .eq("id", fuerPlanEinheit)
+      .maybeSingle()
+      .then(({ data }) => {
+        const d = data as unknown as { planversion: { plan: { athlet_id: string } | null } | null } | null;
+        setPlanAthlet(d?.planversion?.plan?.athlet_id ?? null);
+      });
+  }, [coach, fuerPlanEinheit]);
+  // Coach: eigene Übungen von Kunden nur im Plan genau dieser Person
+  const sichtbar = (u: Uebung) => !coach || !u.privat_fuer || u.privat_fuer === planAthlet;
 
   const treffer = useMemo(() => {
     const s = normal(suche.trim());
     return (alle ?? [])
-      .filter((u) => (!s || normal(u.name).includes(s)) && (!modul || u.modul === modul))
+      .filter((u) => sichtbar(u) && (!s || normal(u.name).includes(s)) && (!modul || u.modul === modul))
       .slice(0, 40);
-  }, [alle, suche, modul]);
-  const vorhandeneModule = [...new Set((alle ?? []).map((u) => u.modul))];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alle, suche, modul, planAthlet, coach]);
+  const vorhandeneModule = [...new Set((alle ?? []).filter(sichtbar).map((u) => u.modul))];
+
+  if (neu) {
+    return (
+      <div className="mt-2 rounded-xl border border-akzent/50 p-3">
+        <p className="mb-3 font-medium">Eigene Übung anlegen</p>
+        <EigeneUebungFormular
+          athletId={profil.id}
+          vorlage={null}
+          vorhandene={alle ?? []}
+          fertig={(u) => {
+            setNeu(false);
+            if (u) waehlen(u);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mt-2 flex flex-col gap-2 rounded-xl border border-akzent/50 p-3">
@@ -74,7 +119,10 @@ export function UebungAuswahl({
           {treffer.map((u) => (
             <li key={u.id}>
               <button type="button" onClick={() => waehlen(u)} className="w-full py-2 text-left">
-                <span className="block font-medium">{u.name}</span>
+                <span className="block font-medium">
+                  {u.name}
+                  {u.privat_fuer && <span className="ml-2 text-xs font-normal text-leise">(eigene)</span>}
+                </span>
                 <span className="block text-xs text-leise">
                   {u.modul !== "kraft" && `${modulText[u.modul] ?? u.modul} · `}
                   {musterText[u.bewegungsmuster]}
@@ -84,6 +132,11 @@ export function UebungAuswahl({
           ))}
           {treffer.length === 0 && <li className="py-2 text-sm text-leise">Nichts gefunden.</li>}
         </ul>
+      )}
+      {!coach && (
+        <button type="button" onClick={() => setNeu(true)} className="h-11 rounded-xl border border-akzent px-3 text-sm font-medium text-akzent">
+          + Eigene Übung anlegen
+        </button>
       )}
     </div>
   );

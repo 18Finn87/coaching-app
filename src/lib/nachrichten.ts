@@ -4,7 +4,7 @@
  */
 import { supabase } from "./supabase";
 
-export type NachrichtArt = "kommentar" | "ziele_geaendert";
+export type NachrichtArt = "kommentar" | "ziele_geaendert" | "uebung_vorschlag";
 
 export type Nachricht = {
   id: string;
@@ -16,13 +16,17 @@ export type Nachricht = {
   coach_antwort_am: string | null;
   gesehen_am: string | null;
   athlet?: { anzeigename: string } | null;
+  uebung_id?: string | null;
+  uebung?: { id: string; name: string; privat_fuer: string | null } | null;
 };
 
-const SPALTEN = "id, athlet_id, art, text, erstellt_am, coach_antwort, coach_antwort_am, gesehen_am";
+const SPALTEN =
+  "id, athlet_id, art, text, erstellt_am, coach_antwort, coach_antwort_am, gesehen_am, uebung_id, uebung:uebungen (id, name, privat_fuer)";
 
 export const artText: Record<NachrichtArt, string> = {
   kommentar: "Nachricht",
   ziele_geaendert: "Ziele haben sich geändert",
+  uebung_vorschlag: "Übungsvorschlag",
 };
 
 export async function nachrichtenLaden(athletId: string, grenze = 20): Promise<Nachricht[] | null> {
@@ -32,7 +36,7 @@ export async function nachrichtenLaden(athletId: string, grenze = 20): Promise<N
     .eq("athlet_id", athletId)
     .order("erstellt_am", { ascending: false })
     .limit(grenze);
-  return error ? null : ((data as Nachricht[] | null) ?? []);
+  return error ? null : ((data as unknown as Nachricht[] | null) ?? []);
 }
 
 /** Coach: alle Nachrichten ohne Reaktion (weder Antwort noch „gesehen“) */
@@ -50,6 +54,15 @@ export async function nachrichtSenden(art: NachrichtArt, text: string): Promise<
   const t = text.trim();
   if (!t) return false;
   const { error } = await supabase().from("kunden_nachrichten").insert({ art, text: t.slice(0, 2000) });
+  return !error;
+}
+
+/** Kunde: Übung dem Coach vorschlagen (in den Plan kommt sie nur, wenn der Coach das tut) */
+export async function uebungVorschlagen(uebungId: string, uebungName: string, text: string): Promise<boolean> {
+  const t = text.trim() || `Vorschlag: ${uebungName}`;
+  const { error } = await supabase()
+    .from("kunden_nachrichten")
+    .insert({ art: "uebung_vorschlag", text: t.slice(0, 2000), uebung_id: uebungId });
   return !error;
 }
 

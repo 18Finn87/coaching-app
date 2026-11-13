@@ -18,12 +18,14 @@ export type Uebung = {
   beschreibung: string;
   video_link: string | null;
   archiviert: boolean;
+  /** Eigene Übung einer Kundin/eines Kunden (nur für diese Person und den Coach sichtbar) */
+  privat_fuer: string | null;
 };
 
-export type UebungEingabe = Omit<Uebung, "id" | "archiviert">;
+export type UebungEingabe = Omit<Uebung, "id" | "archiviert" | "privat_fuer">;
 
 const SPALTEN =
-  "id, name, modul, bewegungsmuster, muskelgruppen, ausstattung, einseitig, seiten_getrennt, kleiner_besser, messart, einheit, wertung, e1rm_geeignet, beschreibung, video_link, archiviert";
+  "id, name, modul, bewegungsmuster, muskelgruppen, ausstattung, einseitig, seiten_getrennt, kleiner_besser, messart, einheit, wertung, e1rm_geeignet, beschreibung, video_link, archiviert, privat_fuer";
 
 export const musterText: Record<string, string> = {
   kniebeuge: "Kniebeuge",
@@ -147,6 +149,60 @@ export async function uebungSpeichern(id: string | null, werte: UebungEingabe): 
   if (error.code === "23505") return "Eine Übung mit diesem Namen gibt es schon.";
   if (error.code === "23514") return "Bitte prüfe die Eingaben (zum Beispiel muss ein Video-Link mit https:// beginnen).";
   return "Speichern hat nicht geklappt. Bitte versuche es erneut.";
+}
+
+/** Arten für eigene Übungen der Kunden: einfach statt Fachbegriffe */
+export const EIGENE_ARTEN = [
+  { wert: "kraft_last", text: "Kraft mit Gewicht", modul: "kraft", messart: "wdh_last" },
+  { wert: "kraft_wdh", text: "Kraft ohne Gewicht (nur Wiederholungen)", modul: "kraft", messart: "wdh" },
+  { wert: "halten", text: "Halten auf Zeit (z. B. Unterarmstütz)", modul: "kraft", messart: "zeit" },
+  { wert: "mobilitaet", text: "Dehnen / Mobilität (Zeit)", modul: "mobilitaet", messart: "zeit" },
+  { wert: "ausdauer", text: "Ausdauer (Zeit und Strecke)", modul: "ausdauer", messart: "ausdauer" },
+] as const;
+
+export function eigeneArt(u: { modul: string; messart: string }): string {
+  return EIGENE_ARTEN.find((a) => a.modul === u.modul && a.messart === u.messart)?.wert ?? "kraft_last";
+}
+
+export type EigeneEingabe = { name: string; art: string; einseitig: boolean; beschreibung: string; video_link: string | null };
+
+/** Kunde: eigene Übung anlegen (id leer) oder ändern. Liefert die Übung oder einen Fehlertext. */
+export async function eigeneUebungSpeichern(
+  id: string | null,
+  athletId: string,
+  e: EigeneEingabe,
+  vorhandene: { id: string; name: string }[] = [],
+): Promise<{ uebung: Uebung | null; fehler: string | null }> {
+  const name = e.name.trim().replace(/s+/g, " ").slice(0, 80);
+  if (!name) return { uebung: null, fehler: "Bitte gib einen Namen ein." };
+  if (vorhandene.some((u) => u.id !== id && u.name.toLowerCase() === name.toLowerCase()))
+    return { uebung: null, fehler: "Eine Übung mit diesem Namen gibt es schon – du kannst sie direkt auswählen." };
+  if (e.video_link && !e.video_link.startsWith("https://"))
+    return { uebung: null, fehler: "Der Video-Link muss mit https:// beginnen." };
+  const art = EIGENE_ARTEN.find((a) => a.wert === e.art) ?? EIGENE_ARTEN[0];
+  const werte = {
+    name,
+    modul: art.modul,
+    messart: art.messart,
+    einseitig: e.einseitig,
+    beschreibung: e.beschreibung.trim().slice(0, 2000),
+    video_link: e.video_link?.trim() || null,
+  };
+  const sb = supabase();
+  const { data, error } = id
+    ? await sb.from("uebungen").update(werte).eq("id", id).select(SPALTEN).single()
+    : await sb.from("uebungen").insert({ ...werte, privat_fuer: athletId }).select(SPALTEN).single();
+  if (!error) return { uebung: data as Uebung, fehler: null };
+  if (error.code === "23505") return { uebung: null, fehler: "Eine Übung mit diesem Namen hast du schon." };
+  return { uebung: null, fehler: "Speichern hat nicht geklappt. Bitte versuche es erneut." };
+}
+
+/** Coach: eigene Übung einer Person für alle Kunden freigeben */
+export async function uebungFreigeben(id: string): Promise<string | null> {
+  const { error } = await supabase().from("uebungen").update({ privat_fuer: null }).eq("id", id);
+  if (!error) return null;
+  if (error.code === "23505") return "In deiner Sammlung gibt es schon eine Übung mit diesem Namen. Benenne sie vorher um.";
+  return "Freigeben hat nicht geklappt. Bitte versuche es erneut.";
 }
 
 export async function uebungArchivieren(id: string, archiviert: boolean): Promise<boolean> {

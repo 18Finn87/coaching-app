@@ -202,6 +202,7 @@ function EinheitKarte({
 
       {auswahl ? (
         <UebungAuswahl
+          fuerPlanEinheit={einheit.id}
           abbrechen={() => setAuswahl(false)}
           waehlen={(uebung) => {
             setAuswahl(false);

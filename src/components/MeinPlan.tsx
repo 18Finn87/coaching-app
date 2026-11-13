@@ -187,6 +187,11 @@ export function MeinPlan({ athletId }: { athletId: string }) {
           Freies Training ohne Plan
         </button>
       )}
+      {plaene && (
+        <Link href="/uebungen/" className="text-center text-sm text-leise underline">
+          Meine Übungen: eigene anlegen oder dem Coach vorschlagen
+        </Link>
+      )}
     </>
   );
 }
