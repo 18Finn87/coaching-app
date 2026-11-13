@@ -5,19 +5,24 @@ import { Karte } from "./Bausteine";
 import { AerztlicherHinweis, AntwortenListe } from "./AnamneseTeile";
 import { BeschwerdenListe } from "./BeschwerdenListe";
 import {
-  aerztlicherHinweis,
   anamneseListe,
   beschwerdenListe,
   type AnamneseVersion,
   type Beschwerde,
 } from "@/lib/anamnese";
 import { datum } from "@/lib/texte";
+import { aerztlichNoetig, fragebogenFuer, type Fragebogen } from "@/lib/fragebogen";
 
 /** Coach: Anamnese und Beschwerden einer betreuten Person (nur lesen). */
 export function AnamneseAnsicht({ athletId, einwilligung }: { athletId: string; einwilligung: boolean }) {
   const [versionen, setVersionen] = useState<AnamneseVersion[] | null>(null);
   const [beschwerden, setBeschwerden] = useState<Beschwerde[]>([]);
   const [auswahl, setAuswahl] = useState(0);
+  const [bogen, setBogen] = useState<Fragebogen | null>(null);
+  const fassung = versionen?.[auswahl]?.fragenversion;
+  useEffect(() => {
+    if (fassung) fragebogenFuer(fassung).then(setBogen);
+  }, [fassung]);
 
   useEffect(() => {
     if (!einwilligung) return;
@@ -68,12 +73,12 @@ export function AnamneseAnsicht({ athletId, einwilligung }: { athletId: string; 
                 ))}
               </select>
             </div>
-            {aerztlicherHinweis(v.antworten) && (
+            {bogen && aerztlichNoetig(bogen.fragen, v.antworten) && (
               <div className="mb-3">
                 <AerztlicherHinweis fuerCoach />
               </div>
             )}
-            <AntwortenListe antworten={v.antworten} />
+            {bogen ? <AntwortenListe antworten={v.antworten} fragen={bogen.fragen} /> : <p className="text-leise">Lädt …</p>}
             <p className="mt-3 text-xs text-leise">
               Selbstauskunft der Person. Die App bewertet diese Angaben nicht medizinisch.
             </p>

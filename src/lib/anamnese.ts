@@ -59,7 +59,8 @@ export const FRAGEN: Frage[] = [
 
 export const SONSTIGES_ID = "sonstiges";
 
-export type Antwort = { wert?: Wert; text?: string };
+/** wert: bei Ja/Nein ja|nein|keine_angabe, bei Auswahl die gewählte Möglichkeit */
+export type Antwort = { wert?: string; text?: string };
 export type Antworten = Record<string, Antwort>;
 
 export type AnamneseVersion = {
@@ -73,6 +74,8 @@ export type AnamneseVersion = {
 export type Beschwerde = {
   id: string;
   koerperregion: string;
+  /** Stellen am Männchen (neu); leer bei älteren Einträgen */
+  koerperstellen: string[];
   beschreibung: string;
   seit: string | null;
   bis: string | null;
@@ -116,9 +119,9 @@ export async function anamneseListe(athletId: string) {
   return { daten: (data as AnamneseVersion[] | null) ?? [], fehler: !!error };
 }
 
-export async function anamneseSpeichern(antworten: Antworten): Promise<number | null> {
+export async function anamneseSpeichern(antworten: Antworten, fragenversion: string = FRAGENVERSION): Promise<number | null> {
   const { data, error } = await supabase().rpc("anamnese_speichern", {
-    p_fragenversion: FRAGENVERSION,
+    p_fragenversion: fragenversion,
     p_antworten: antworten,
   });
   return error ? null : (data as number);
@@ -131,19 +134,21 @@ export async function anamneseLoeschen(): Promise<boolean> {
 
 export async function beschwerdenListe(athletId: string) {
   const { data, error } = await supabase().rpc("beschwerden_liste", { p_athlet: athletId });
-  return { daten: (data as Beschwerde[] | null) ?? [], fehler: !!error };
+  return { daten: ((data as Beschwerde[] | null) ?? []).map((b) => ({ ...b, koerperstellen: b.koerperstellen ?? [] })), fehler: !!error };
 }
 
 export async function beschwerdeSpeichern(b: {
   id: string | null;
   koerperregion: string;
+  koerperstellen: string[];
   beschreibung: string;
   seit: string | null;
   bis: string | null;
 }): Promise<boolean> {
-  const { error } = await supabase().rpc("beschwerde_speichern", {
+  const { error } = await supabase().rpc("beschwerde_speichern_stellen", {
     p_id: b.id,
     p_koerperregion: b.koerperregion,
+    p_koerperstellen: b.koerperstellen,
     p_beschreibung: b.beschreibung,
     p_seit: b.seit,
     p_bis: b.bis,

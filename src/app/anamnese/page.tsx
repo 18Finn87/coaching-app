@@ -6,9 +6,7 @@ import { Karte, NurFuer, Seitentitel } from "@/components/Bausteine";
 import { AerztlicherHinweis, AntwortenListe } from "@/components/AnamneseTeile";
 import { BeschwerdenListe } from "@/components/BeschwerdenListe";
 import {
-  FRAGEN,
   SONSTIGES_ID,
-  aerztlicherHinweis,
   anamneseListe,
   anamneseLoeschen,
   anamneseSpeichern,
@@ -24,6 +22,7 @@ import {
 } from "@/lib/anamnese";
 import { useEinwilligungen } from "@/lib/einwilligungen";
 import { useProfil } from "@/lib/konto";
+import { aerztlichNoetig, aktuellerFragebogen, fragebogenFuer, offeneFragen, type Fragebogen as FragebogenTyp } from "@/lib/fragebogen";
 import { datum } from "@/lib/texte";
 
 export default function AnamneseSeite() {
@@ -131,35 +130,48 @@ function Fragebogen({
   neueste: AnamneseVersion | undefined;
   beiGespeichert: () => void;
 }) {
+  const [bogen, setBogen] = useState<FragebogenTyp | null>(null);
   const [antworten, setAntworten] = useState<Antworten>(neueste?.antworten ?? {});
   const [laeuft, setLaeuft] = useState(false);
   const [meldung, setMeldung] = useState<{ ok: boolean; text: string } | null>(null);
 
-  function setzen(id: string, teil: Partial<{ wert: Wert; text: string }>) {
+  useEffect(() => {
+    aktuellerFragebogen().then(setBogen);
+  }, []);
+
+  function setzen(id: string, teil: Partial<{ wert: string; text: string }>) {
     setAntworten((alt) => ({ ...alt, [id]: { ...alt[id], ...teil } }));
     setMeldung(null);
   }
 
-  const offen = FRAGEN.filter((f) => !antworten[f.id]?.wert).length;
+  if (!bogen) return <Karte titel="Anamnese"><p className="text-leise">Lädt …</p></Karte>;
+  const fragen = bogen.fragen;
+  const offen = offeneFragen(fragen, antworten);
+  const neueFassung = !!neueste && neueste.fragenversion !== bogen.id;
 
   async function speichern(e: FormEvent) {
     e.preventDefault();
     if (offen > 0) {
-      setMeldung({ ok: false, text: `Bitte beantworte noch ${offen} Frage(n). „Keine Angabe“ ist auch möglich.` });
+      setMeldung({ ok: false, text: `Bitte beantworte noch ${offen} Frage(n). „Keine Angabe“ ist bei Ja/Nein auch möglich.` });
       return;
     }
-    // Texte bereinigen; Freitext nur behalten, wo er gefragt ist
+    // Nur Antworten zu den aktuellen Fragen speichern, Texte bereinigen
     const sauber: Antworten = {};
-    for (const f of FRAGEN) {
+    for (const f of fragen) {
       const a = antworten[f.id];
-      const text = f.mitText && a?.wert === "ja" ? (a.text ?? "").trim().slice(0, 1000) : "";
+      if (f.typ === "text") {
+        const t = (a?.text ?? "").trim().slice(0, 1000);
+        if (t) sauber[f.id] = { text: t };
+        continue;
+      }
+      const text = f.typ === "janein" && f.mitText && a?.wert === "ja" ? (a.text ?? "").trim().slice(0, 1000) : "";
       sauber[f.id] = text ? { wert: a!.wert, text } : { wert: a!.wert };
     }
     const sonst = (antworten[SONSTIGES_ID]?.text ?? "").trim().slice(0, 2000);
     if (sonst) sauber[SONSTIGES_ID] = { text: sonst };
 
     setLaeuft(true);
-    const version = await anamneseSpeichern(sauber);
+    const version = await anamneseSpeichern(sauber, bogen!.id);
     setLaeuft(false);
     if (version === null) {
       setMeldung({ ok: false, text: "Speichern hat nicht geklappt. Bitte versuche es erneut." });
@@ -169,21 +181,55 @@ function Fragebogen({
     beiGespeichert();
   }
 
+  const textfeld = "w-full rounded-xl border border-rand bg-background p-3 text-base outline-none focus:border-akzent";
+
   return (
     <Karte titel="Anamnese">
+      {neueFassung && (
+        <p className="mb-3 rounded-xl border border-akzent/50 bg-akzent/10 p-3 text-sm">
+          Dein Coach hat den Fragebogen geändert. Deine bisherigen Antworten sind übernommen, soweit die Fragen gleich
+          geblieben sind – bitte ergänze die neuen Fragen und speichere.
+        </p>
+      )}
       <p className="mb-4 text-sm text-leise">
         {neueste
           ? `Zuletzt gespeichert am ${datum(neueste.erstellt_am)} (Fassung ${neueste.version}). Wenn sich etwas ändert, passe es an und speichere neu – frühere Fassungen bleiben erhalten.`
-          : "Bitte beantworte die Fragen ehrlich. Bei jeder Frage kannst du auch „Keine Angabe“ wählen."}
+          : "Bitte beantworte die Fragen ehrlich. Bei Ja/Nein-Fragen kannst du auch „Keine Angabe“ wählen."}
       </p>
       <form onSubmit={speichern} className="flex flex-col gap-5">
-        {FRAGEN.map((f, i) => {
+        {fragen.map((f, i) => {
           const a = antworten[f.id];
+          const titel = `${i + 1}. ${f.text}`;
+          if (f.typ === "auswahl") {
+            return (
+              <label key={f.id} className="flex flex-col gap-1 text-sm font-medium">
+                {titel}
+                <select
+                  value={a?.wert ?? ""}
+                  onChange={(e) => setzen(f.id, { wert: e.target.value || undefined })}
+                  className="h-12 w-full rounded-xl border border-rand bg-background px-3 text-base font-normal outline-none focus:border-akzent"
+                >
+                  <option value="">Bitte wählen</option>
+                  {(f.optionen ?? []).map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            );
+          }
+          if (f.typ === "text") {
+            return (
+              <label key={f.id} className="flex flex-col gap-1 text-sm font-medium">
+                {titel} <span className="font-normal text-leise">(freiwillig)</span>
+                <textarea rows={2} maxLength={1000} value={a?.text ?? ""} onChange={(e) => setzen(f.id, { text: e.target.value })} className={textfeld} />
+              </label>
+            );
+          }
           return (
             <fieldset key={f.id} className="flex flex-col gap-2">
-              <legend className="mb-1 text-sm font-medium">
-                {i + 1}. {f.text}
-              </legend>
+              <legend className="mb-1 text-sm font-medium">{titel}</legend>
               <div className="flex flex-wrap gap-2">
                 {(Object.keys(wertText) as Wert[]).map((w) => (
                   <label
@@ -192,13 +238,7 @@ function Fragebogen({
                       a?.wert === w ? "border-akzent bg-akzent/15 text-akzent" : "border-rand"
                     }`}
                   >
-                    <input
-                      type="radio"
-                      name={f.id}
-                      className="sr-only"
-                      checked={a?.wert === w}
-                      onChange={() => setzen(f.id, { wert: w })}
-                    />
+                    <input type="radio" name={f.id} className="sr-only" checked={a?.wert === w} onChange={() => setzen(f.id, { wert: w })} />
                     {wertText[w]}
                   </label>
                 ))}
@@ -211,7 +251,7 @@ function Fragebogen({
                   maxLength={1000}
                   value={a.text ?? ""}
                   onChange={(e) => setzen(f.id, { text: e.target.value })}
-                  className="w-full rounded-xl border border-rand bg-background p-3 text-base outline-none focus:border-akzent"
+                  className={textfeld}
                 />
               )}
             </fieldset>
@@ -228,11 +268,11 @@ function Fragebogen({
             maxLength={2000}
             value={antworten[SONSTIGES_ID]?.text ?? ""}
             onChange={(e) => setzen(SONSTIGES_ID, { text: e.target.value })}
-            className="w-full rounded-xl border border-rand bg-background p-3 text-base outline-none focus:border-akzent"
+            className={textfeld}
           />
         </div>
 
-        {aerztlicherHinweis(antworten) && <AerztlicherHinweis />}
+        {aerztlichNoetig(fragen, antworten) && <AerztlicherHinweis />}
 
         <button
           type="submit"
@@ -252,12 +292,16 @@ function Fragebogen({
 }
 
 function AntwortenAnzeige({ version }: { version: AnamneseVersion }) {
+  const [bogen, setBogen] = useState<FragebogenTyp | null>(null);
+  useEffect(() => {
+    fragebogenFuer(version.fragenversion).then(setBogen);
+  }, [version.fragenversion]);
   return (
     <Karte titel="Anamnese">
       <p className="mb-3 text-sm text-leise">
         Fassung {version.version} vom {datum(version.erstellt_am)} – nur für dich sichtbar.
       </p>
-      <AntwortenListe antworten={version.antworten} />
+      {bogen ? <AntwortenListe antworten={version.antworten} fragen={bogen.fragen} /> : <p className="text-leise">Lädt …</p>}
     </Karte>
   );
 }

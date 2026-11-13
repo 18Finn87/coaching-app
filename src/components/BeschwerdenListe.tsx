@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from "react";
 import { Karte } from "./Bausteine";
 import { beschwerdeLoeschen, beschwerdeSpeichern, regionText, type Beschwerde } from "@/lib/anamnese";
+import { altRegion, stellenText } from "@/lib/koerper";
+import { Koerperkarte } from "./Koerperkarte";
 import { datum } from "@/lib/texte";
 
 const feld =
@@ -26,6 +28,12 @@ export function BeschwerdenListe({
     <Karte titel="Beschwerden">
       {beschwerden.length === 0 && (
         <p className="text-sm text-leise">Keine Beschwerden eingetragen.</p>
+      )}
+      {aktuell.some((b) => b.koerperstellen.length > 0) && bearbeiten === null && (
+        <div className="mb-3">
+          <Koerperkarte gewaehlt={[...new Set(aktuell.flatMap((b) => b.koerperstellen))]} />
+          <p className="mt-1 text-center text-xs text-leise">Markiert: alle aktuellen Beschwerden</p>
+        </div>
       )}
       {aktuell.length > 0 && <Gruppe titel="Aktuell" liste={aktuell} bearbeitbar={bearbeitbar} waehlen={setBearbeiten} />}
       {frueher.length > 0 && <Gruppe titel="Abgeklungen" liste={frueher} bearbeitbar={bearbeitbar} waehlen={setBearbeiten} />}
@@ -71,7 +79,9 @@ function Gruppe({
         {liste.map((b) => (
           <li key={b.id} className="flex items-start justify-between gap-3 py-2">
             <div className="min-w-0 text-sm">
-              <p className="font-medium">{regionText[b.koerperregion] ?? b.koerperregion}</p>
+              <p className="font-medium">
+                {b.koerperstellen.length > 0 ? stellenText(b.koerperstellen) : (regionText[b.koerperregion] ?? b.koerperregion)}
+              </p>
               {b.beschreibung && <p className="whitespace-pre-wrap">{b.beschreibung}</p>}
               <p className="text-leise">
                 {b.seit ? `seit ${datum(b.seit)}` : "Beginn unbekannt"}
@@ -95,7 +105,9 @@ function Gruppe({
 }
 
 function Formular({ vorlage, fertig }: { vorlage: Beschwerde | null; fertig: () => void }) {
-  const [region, setRegion] = useState(vorlage?.koerperregion ?? "");
+  // Ältere Einträge ohne Stellen behalten ihre Region, bis neu angetippt wird
+  const [stellen, setStellen] = useState<string[]>(vorlage?.koerperstellen ?? []);
+  const altRegionText = vorlage && vorlage.koerperstellen.length === 0 ? regionText[vorlage.koerperregion] : null;
   const [text, setText] = useState(vorlage?.beschreibung ?? "");
   const [seit, setSeit] = useState(vorlage?.seit ?? "");
   const [bis, setBis] = useState(vorlage?.bis ?? "");
@@ -104,8 +116,12 @@ function Formular({ vorlage, fertig }: { vorlage: Beschwerde | null; fertig: () 
 
   async function speichern(e: FormEvent) {
     e.preventDefault();
-    if (!region) {
-      setFehler("Bitte wähle eine Körperregion.");
+    if (stellen.length === 0 && !altRegionText) {
+      setFehler("Bitte tippe am Männchen an, wo es ist (oder „Sonstiges“).");
+      return;
+    }
+    if (stellen.includes("sonstiges") && !text.trim()) {
+      setFehler("Bei „Sonstiges“ bitte kurz beschreiben, wo.");
       return;
     }
     if (seit && bis && bis < seit) {
@@ -116,7 +132,8 @@ function Formular({ vorlage, fertig }: { vorlage: Beschwerde | null; fertig: () 
     setFehler("");
     const ok = await beschwerdeSpeichern({
       id: vorlage?.id ?? null,
-      koerperregion: region,
+      koerperregion: stellen.length ? altRegion(stellen) : vorlage!.koerperregion,
+      koerperstellen: stellen,
       beschreibung: text.trim().slice(0, 1000),
       seit: seit || null,
       bis: bis || null,
@@ -143,18 +160,35 @@ function Formular({ vorlage, fertig }: { vorlage: Beschwerde | null; fertig: () 
 
   return (
     <form onSubmit={speichern} className="mt-3 flex flex-col gap-3 rounded-xl border border-rand p-3">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="b-region" className="text-sm font-medium">
-          Wo?
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">Wo? Tippe die Stellen an (mehrere möglich).</p>
+        <Koerperkarte
+          gewaehlt={stellen}
+          umschalten={(id) => setStellen((alt) => (alt.includes(id) ? alt.filter((x) => x !== id) : [...alt, id]))}
+        />
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={stellen.includes("sonstiges")}
+            onChange={() =>
+              setStellen((alt) => (alt.includes("sonstiges") ? alt.filter((x) => x !== "sonstiges") : [...alt, "sonstiges"]))
+            }
+            className="size-5 accent-akzent"
+          />
+          Sonstiges (bitte unten beschreiben)
         </label>
-        <select id="b-region" value={region} onChange={(e) => setRegion(e.target.value)} className={feld}>
-          <option value="">Bitte wählen</option>
-          {Object.entries(regionText).map(([w, t]) => (
-            <option key={w} value={w}>
-              {t}
-            </option>
-          ))}
-        </select>
+        <p className="text-sm" aria-live="polite">
+          {stellen.length > 0 ? (
+            <>
+              <span className="text-leise">Gewählt: </span>
+              {stellenText(stellen)}
+            </>
+          ) : altRegionText ? (
+            <span className="text-leise">Bisher: {altRegionText} – tippe Stellen an, um es genauer anzugeben.</span>
+          ) : (
+            <span className="text-leise">Noch nichts gewählt.</span>
+          )}
+        </p>
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="b-text" className="text-sm font-medium">

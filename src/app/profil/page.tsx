@@ -123,6 +123,12 @@ export default function ProfilSeite() {
           <FormelEinstellung coachId={profil.id} />
           <RegelEinstellung />
           <BriefingEinstellung />
+          <Karte titel="Anamnese-Fragebogen">
+            <p className="mb-3 text-sm text-leise">Fragen umformulieren, hinzufügen, entfernen oder umsortieren – gilt für alle.</p>
+            <Link href="/fragebogen/" className="inline-flex h-12 items-center rounded-xl border border-akzent px-4 font-semibold text-akzent">
+              Fragebogen bearbeiten
+            </Link>
+          </Karte>
           <Karte titel="Datenschutz">
             <p className="text-sm text-leise">
               Die Einwilligungen deiner Athletinnen und Athleten siehst du unter „Athleten“.
